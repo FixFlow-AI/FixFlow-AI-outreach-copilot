@@ -1,53 +1,81 @@
+import { authMiddleware } from './lib/auth.js';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 export default async function handler(req, res) {
+  // CORS Headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Read Gemini API key from Vercel environment variables
-  const apiKey = process.env.GEMINI_API_KEY;
+  // Enforce JWT Auth
+  const user = authMiddleware(req, res);
+  if (!user) return; // 401 handled
+
+  // Read Gemini API key from request body or environment variables
+  const apiKey = (req.body?.apiKey || process.env.GEMINI_API_KEY || '').trim();
   if (!apiKey) {
-    return res.status(500).json({
-      error: 'GEMINI_API_KEY is not configured in Vercel environment variables. Please add GEMINI_API_KEY in your Vercel Project Settings.'
+    return res.status(400).json({
+      error: 'GEMINI_API_KEY is not configured. Please add GEMINI_API_KEY to your .env file or enter your API key in the settings.'
     });
   }
 
-  const { name, headline, stack, context, connected } = req.body || {};
+  const { name, headline, stack, context, connected, linkedinUrl } = req.body || {};
 
   if (!name || !headline) {
     return res.status(400).json({ error: 'Name and headline are required.' });
   }
 
-  const system = `You write genuine, clear, peer-to-peer LinkedIn outreach for FixFlow AI (website: fixflowai.xyz).
+  const system = `You write genuine, concise, peer-to-peer LinkedIn outreach messages for FixFlow AI (fixflowai.xyz).
 
-About FixFlow AI:
-FixFlow AI helps freelance software developers—especially backend and full-stack engineers—get hired on merit and eliminate freelance friction:
-1. GitHub-Verified Skills Profiles: Proves deep technical ability from actual repositories, commits, and code architecture (rather than unverified self-written resume fluff).
-2. Escrow-Protected Milestone Payments: Guarantees payment on milestone completion, eliminating client payment delays, non-payment, and ghosting.
-3. Quality Over Bidding Wars: Helps high-skill developers stand out without competing against noisy, low-quality proposals in a race to the bottom.
+Core Philosophy:
+- Write like a fellow engineer or founder messaging an engineer directly.
+- Strictly ZERO sales or marketing speak, ZERO corporate buzzwords (no "game-changer", "revolutionary", "seamless", "synergy", "10x", "supercharge").
+- Address real freelance developer pain points with our brief, tangible solution.
+- Genuine, humble, simple, and humanized.
 
-Given details about one person, generate two distinct, high-quality, and well-structured messages:
+Developer Pain Points & FixFlow AI Solution:
+1. Pain Point: Standard resumes hide actual code quality. In freelance bidding, top engineers get drowned out by noisy, unverified fluff.
+   FixFlow Solution: GitHub-Verified Skills Profiles that verify real technical competence from actual repositories and code architecture.
+2. Pain Point: Milestone payment anxiety—clients delaying milestone payouts, scope creep, or ghosting after delivery.
+   FixFlow Solution: Escrow-protected milestone payouts, guaranteeing payment upon milestone completion.
+
+Generate two high-quality, concise messages:
 
 1. connection_note (for a NEW LinkedIn invite):
-   - Strict hard limit: under 280 characters total.
-   - Plain text, 1-2 concise sentences, no line breaks.
-   - Mention one specific, real detail about them (their stack, recent project/repo, or technical focus).
-   - Warm, authentic, peer-to-peer, and zero sales pitch.
+   - Strict hard limit: under 250 characters total.
+   - 1-2 concise, natural sentences. No line breaks.
+   - Mention one specific technical detail about their work (their stack, project, or domain).
+   - Warm peer greeting, zero pitch, zero link.
 
 2. dm_message (for someone already connected, or after they accept your invite):
-   - Format cleanly into 3 short, well-structured, scannable paragraphs separated by blank lines (\\n\\n):
-     • Paragraph 1 (Genuine Personal Hook): Direct, friendly greeting referencing their specific work, stack, or experience in an authentic way.
-     • Paragraph 2 (Relatable Developer Problem & FixFlow Solution): Speak directly to their technical/freelancing reality. If they do backend or freelance work, highlight their specific friction (e.g. backend architecture & code quality being invisible on standard resumes, client milestone/payment security, or filtering through bidding noise). Briefly explain how FixFlow solves this with GitHub-verified repo profiles and escrow milestones.
-     • Paragraph 3 (Low-Pressure Invitation): A polite, low-friction invitation to check out fixflowai.xyz and view/claim their verified profile if they're curious, with no aggressive sales pressure.
-     • Sign-off.
+   - Format cleanly into 3 brief, scannable paragraphs separated by blank lines (\\n\\n):
+     • Paragraph 1 (Genuine Personal Hook): Direct, friendly greeting referencing their specific work, stack, or experience authentically.
+     • Paragraph 2 (Relatable Pain Point & Brief FixFlow Solution): Address their technical/freelancing reality. Touch on the friction of unverified resume noise in bidding or milestone payment security, and briefly note how FixFlow eliminates this with GitHub-verified repo profiles and escrow milestones. Keep it punchy and empathetic.
+     • Paragraph 3 (Low-Pressure Invitation): A polite, low-friction invitation to check out fixflowai.xyz and claim their verified profile if curious, with no sales pressure.
+     • Clean, simple sign-off.
 
-Quality Rules:
-- Structure the DM with clean double line breaks between paragraphs so it is immediately legible and comfortable to read.
-- Include fixflowai.xyz naturally in the final paragraph.
-- Tone: Humble, direct, and technical—like one engineer or founder messaging another engineer.
-- Avoid all corporate fluff, marketing jargon, and buzzwords (e.g., game-changer, revolutionary, seamless, synergy, 10x).
-- No emojis, and at most one exclamation mark across both messages combined.
-- Never invent facts about the person beyond what was provided.
+Formatting Rules:
+- Understated tone: at most one exclamation mark across both messages combined. No emojis.
+- Never invent unmentioned facts about the person.
 
 Respond with ONLY valid JSON with no markdown fences, no preamble, exactly this shape:
 {"connection_note": "...", "dm_message": "..."}`;
@@ -56,46 +84,64 @@ Respond with ONLY valid JSON with no markdown fences, no preamble, exactly this 
 Headline/bio: ${headline}
 Stack/skill: ${stack || 'not specified'}
 Specific hook: ${context || 'none given — keep the note generically warm rather than inventing one'}
-Already connected: ${connected ? 'yes, skip framing this as a first-touch stranger note in the DM' : 'no'}`;
+Already connected: ${connected ? 'yes, skip connection note and frame DM as ongoing conversation' : 'no'}
+LinkedIn URL: ${linkedinUrl || 'none'}`;
 
-  const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+  const CANDIDATE_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-2.0-flash'];
+  let parsed = null;
+  let lastError = null;
 
-  try {
-    const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: system }]
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: userMsg }]
-          }
-        ],
-        generationConfig: {
-          response_mime_type: 'application/json',
-          temperature: 0.7
+  for (const model of CANDIDATE_MODELS) {
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: {
+              parts: [{ text: system }]
+            },
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: userMsg }]
+              }
+            ],
+            generationConfig: {
+              response_mime_type: 'application/json',
+              temperature: 0.65
+            }
+          })
         }
-      })
-    });
+      );
 
-    if (!geminiRes.ok) {
-      const errData = await geminiRes.json().catch(() => ({}));
-      return res.status(geminiRes.status).json({
-        error: errData.error?.message || `Gemini API returned status ${geminiRes.status}`
-      });
+      if (geminiRes.ok) {
+        const data = await geminiRes.json();
+        const candidate = data.candidates?.[0];
+        const raw = candidate?.content?.parts?.map(b => b.text || '').join('').trim() || '';
+        const clean = raw.replace(/^```json\s*|^```\s*|```$/g, '').trim();
+        parsed = JSON.parse(clean);
+        break; // Success!
+      } else {
+        const errData = await geminiRes.json().catch(() => ({}));
+        lastError = errData.error?.message || `Gemini API returned status ${geminiRes.status}`;
+        // If 503 or 404, loop to next model
+        if (geminiRes.status === 503 || geminiRes.status === 404) {
+          continue;
+        } else {
+          return res.status(geminiRes.status).json({ error: lastError });
+        }
+      }
+    } catch (err) {
+      lastError = err.message;
     }
-
-    const data = await geminiRes.json();
-    const candidate = data.candidates?.[0];
-    const raw = candidate?.content?.parts?.map(b => b.text || '').join('').trim() || '';
-    const clean = raw.replace(/^```json\s*|^```\s*|```$/g, '').trim();
-    const parsed = JSON.parse(clean);
-
-    return res.status(200).json(parsed);
-  } catch (err) {
-    return res.status(500).json({ error: err.message || 'Error occurred during generation' });
   }
+
+  if (!parsed) {
+    return res.status(500).json({ error: lastError || 'Error occurred during generation across candidate models' });
+  }
+
+  return res.status(200).json(parsed);
 }
+
