@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node test/db.test.js && node test/auth.test.js && node test/leads.test.js && node test/generate.test.js && node test/parse.test.js"
+    "test": "node test/db.test.js && node test/auth.test.js && node test/leads.test.js && node test/generate.test.js && node test/e2e.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

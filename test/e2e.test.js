@@ -2,7 +2,6 @@ import assert from 'assert';
 import authHandler from '../api/auth.js';
 import leadsHandler from '../api/leads.js';
 import historyHandler from '../api/history.js';
-import parseHandler from '../api/parse-profile.js';
 import { closeDb } from '../api/lib/db.js';
 
 function mockReqRes({ method = 'GET', body = {}, query = {}, headers = {} }) {
@@ -62,36 +61,20 @@ async function runE2ETest() {
       console.log('2. [Login] Logged in successfully as @suvam (7-day JWT issued)');
     }
 
-    // 3. Test LinkedIn profile parser
-    let parsedName = '';
-    {
-      const { req, res, getStatus, getData } = mockReqRes({
-        method: 'POST',
-        headers: { authorization: `Bearer ${suvamToken}` },
-        body: { url: 'https://www.linkedin.com/in/rahul-verma-lead-dev/' }
-      });
-      await parseHandler(req, res);
-      assert.strictEqual(getStatus(), 200);
-      const data = getData();
-      assert.strictEqual(data.success, true);
-      assert.strictEqual(data.name, 'Rahul Verma Lead Dev');
-      parsedName = data.name;
-      console.log(`3. [LinkedIn Parser] Auto-parsed name from URL: "${parsedName}"`);
-    }
-
-    // 4. Save new lead to MongoDB pipeline as @suvam
+    // 3. Save new lead to MongoDB pipeline as @suvam with unique LinkedIn URL
     const leadId = 'e2e_lead_' + Date.now().toString(36);
+    const targetLinkedinUrl = 'https://www.linkedin.com/in/rahul-verma-lead-dev-77/';
     {
       const { req, res, getStatus, getData } = mockReqRes({
         method: 'POST',
         headers: { authorization: `Bearer ${suvamToken}` },
         body: {
           id: leadId,
-          name: parsedName,
+          name: 'Rahul Verma',
           headline: 'Lead Cloud Architect · Go, AWS, Terraform',
           stack: 'Go, Kubernetes, AWS',
           context: 'Discussed freelance payment delays on Twitter',
-          linkedinUrl: 'https://www.linkedin.com/in/rahul-verma-lead-dev/',
+          linkedinUrl: targetLinkedinUrl,
           note: 'Hey Rahul, saw your cloud architecture work—really impressive infrastructure patterns.',
           dm: 'Hi Rahul,\n\nThanks for connecting. Really liked your take on cloud architecture...',
           status: 'Contacted'
@@ -102,10 +85,10 @@ async function runE2ETest() {
       const lead = getData().lead;
       assert.strictEqual(lead.createdBy, 'suvam');
       assert.strictEqual(lead.lastUpdatedBy, 'suvam');
-      console.log(`4. [Pipeline Save] Lead saved to MongoDB by @suvam with attribution (#${lead.id})`);
+      console.log(`3. [Pipeline Save] Lead saved to MongoDB by @suvam with attribution (#${lead.id})`);
     }
 
-    // 5. Login as another authorized user: arijit
+    // 4. Login as second team member: arijit
     let arijitToken = null;
     {
       const { req, res, getStatus, getData } = mockReqRes({
@@ -115,25 +98,44 @@ async function runE2ETest() {
       await authHandler(req, res);
       assert.strictEqual(getStatus(), 200);
       arijitToken = getData().token;
-      console.log('5. [Login] Logged in as second team member: @arijit');
+      console.log('4. [Login] Logged in as second team member: @arijit');
     }
 
-    // 6. As @arijit, fetch team pipeline and verify seeing @suvam's lead
+    // 5. As @arijit, check duplicate on the same prospect URL
     {
       const { req, res, getStatus, getData } = mockReqRes({
         method: 'GET',
-        headers: { authorization: `Bearer ${arijitToken}` }
+        headers: { authorization: `Bearer ${arijitToken}` },
+        query: { checkUrl: 'https://linkedin.com/in/rahul-verma-lead-dev-77?trk=profile' }
       });
       await leadsHandler(req, res);
       assert.strictEqual(getStatus(), 200);
-      const leads = getData().leads;
-      const found = leads.find(l => l.id === leadId);
-      assert(found, 'Lead created by suvam must be visible in shared pipeline to arijit');
-      assert.strictEqual(found.createdBy, 'suvam');
-      console.log(`6. [Shared Pipeline] @arijit accessed shared team pipeline and found lead created by @suvam`);
+      const data = getData();
+      assert.strictEqual(data.exists, true);
+      assert.strictEqual(data.lead.createdBy, 'suvam');
+      console.log(`5. [Duplicate Guard] Real-time check detected @suvam is already reaching this prospect!`);
     }
 
-    // 7. As @arijit, update lead's stage and follow-up notes in MongoDB
+    // 6. As @arijit, attempt to save duplicate prospect -> blocked by backend (409 Conflict)
+    {
+      const { req, res, getStatus, getData } = mockReqRes({
+        method: 'POST',
+        headers: { authorization: `Bearer ${arijitToken}` },
+        body: {
+          id: 'dup_' + Date.now(),
+          name: 'Rahul Verma Duplicate',
+          headline: 'Cloud Architect',
+          linkedinUrl: 'http://www.linkedin.com/in/rahul-verma-lead-dev-77/',
+          status: 'Contacted'
+        }
+      });
+      await leadsHandler(req, res);
+      assert.strictEqual(getStatus(), 409, 'Expected 409 Conflict for duplicate LinkedIn profile');
+      assert(getData().error.includes('Duplicate Profile'));
+      console.log(`6. [Anti-Double-Outreach] Duplicate pipeline addition blocked with 409 Conflict to protect prospect relationship!`);
+    }
+
+    // 7. As @arijit, collaborate on the existing lead: update stage to 'Verified Profile'
     {
       const { req, res, getStatus, getData } = mockReqRes({
         method: 'PATCH',

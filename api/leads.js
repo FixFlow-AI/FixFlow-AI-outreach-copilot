@@ -1,6 +1,26 @@
 import { getDb } from './lib/db.js';
 import { authMiddleware } from './lib/auth.js';
 
+/**
+ * Normalizes a LinkedIn profile URL for exact duplicate detection
+ * e.g. "https://www.linkedin.com/in/alex-rivera/?locale=en" -> "linkedin.com/in/alex-rivera"
+ */
+export function normalizeLinkedinUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim().toLowerCase();
+  const match = trimmed.match(/linkedin\.com\/in\/([a-z0-9_-]+)/i);
+  if (match && match[1]) {
+    // Strip any trailing slashes or sub-routes
+    const slug = match[1].replace(/\/.*$/, '').trim();
+    return `linkedin.com/in/${slug}`;
+  }
+  // Generic fallback normalizer
+  return trimmed
+    .replace(/^https?:\/\/(www\.)?/, '')
+    .replace(/\/$/, '')
+    .split('?')[0];
+}
+
 export default async function handler(req, res) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -22,11 +42,40 @@ export default async function handler(req, res) {
   const db = await getDb();
   const leadsCol = db.collection('leads');
 
-  // GET /api/leads -> Retrieve pipeline leads
+  // GET /api/leads -> Retrieve pipeline leads or check duplicate URL
   if (req.method === 'GET') {
-    const { createdBy, status, search } = req.query || {};
-    const query = {};
+    const { createdBy, status, search, checkUrl } = req.query || {};
 
+    // Dedicated duplicate check query
+    if (checkUrl) {
+      const normalized = normalizeLinkedinUrl(checkUrl);
+      if (!normalized) {
+        return res.status(200).json({ exists: false });
+      }
+
+      const existing = await leadsCol.findOne({
+        $or: [
+          { normalizedLinkedinUrl: normalized },
+          { linkedinUrl: checkUrl.trim() }
+        ]
+      });
+
+      if (existing) {
+        return res.status(200).json({
+          exists: true,
+          lead: {
+            id: existing.id,
+            name: existing.name,
+            createdBy: existing.createdBy,
+            status: existing.status,
+            createdAt: existing.createdAt
+          }
+        });
+      }
+      return res.status(200).json({ exists: false });
+    }
+
+    const query = {};
     if (createdBy) {
       query.createdBy = createdBy.toLowerCase();
     }
@@ -37,7 +86,8 @@ export default async function handler(req, res) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
         { stack: { $regex: search, $options: 'i' } },
-        { headline: { $regex: search, $options: 'i' } }
+        { headline: { $regex: search, $options: 'i' } },
+        { linkedinUrl: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -45,7 +95,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ leads });
   }
 
-  // POST /api/leads -> Create or upsert a lead
+  // POST /api/leads -> Create or upsert a lead with duplicate prevention
   if (req.method === 'POST') {
     const {
       id,
@@ -66,6 +116,29 @@ export default async function handler(req, res) {
 
     const leadId = id || (Date.now().toString(36) + Math.random().toString(16).slice(2, 6));
     const now = new Date();
+    const normalizedUrl = normalizeLinkedinUrl(linkedinUrl);
+
+    // Enforce uniqueness on LinkedIn profile URL: prevent duplicate outreach across team
+    if (normalizedUrl) {
+      const duplicate = await leadsCol.findOne({
+        $and: [
+          { id: { $ne: leadId } },
+          {
+            $or: [
+              { normalizedLinkedinUrl: normalizedUrl },
+              { linkedinUrl: linkedinUrl.trim() }
+            ]
+          }
+        ]
+      });
+
+      if (duplicate) {
+        return res.status(409).json({
+          error: `Duplicate Profile: This person is already in our pipeline, reached by @${duplicate.createdBy} (Current Stage: ${duplicate.status}). Avoid double-reaching the same person.`,
+          existingLead: duplicate
+        });
+      }
+    }
 
     const leadDoc = {
       id: leadId,
@@ -74,6 +147,7 @@ export default async function handler(req, res) {
       stack: stack ? String(stack).trim() : '',
       context: context ? String(context).trim() : '',
       linkedinUrl: linkedinUrl ? String(linkedinUrl).trim() : '',
+      normalizedLinkedinUrl: normalizedUrl,
       note: note || '',
       dm: dm || '',
       status: status || 'Contacted',

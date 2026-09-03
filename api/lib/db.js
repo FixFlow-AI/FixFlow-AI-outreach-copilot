@@ -73,6 +73,7 @@ export async function initDatabase(db) {
     // Ensure indexes for leads
     const leadsCol = db.collection('leads');
     await leadsCol.createIndex({ id: 1 }, { unique: true });
+    await leadsCol.createIndex({ normalizedLinkedinUrl: 1 });
     await leadsCol.createIndex({ updatedAt: -1 });
 
     // Ensure indexes for history

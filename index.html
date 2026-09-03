@@ -289,14 +289,12 @@
     <!-- DRAFT PANEL -->
     <div class="fxo-panel active" id="panel-draft">
       <div class="fxo-card">
-        <!-- LinkedIn URL Input with Auto-Fill -->
+        <!-- LinkedIn URL Input with Unique Duplicate Detection -->
         <div class="fxo-field">
-          <label>LinkedIn Profile URL (Optional auto-extractor)</label>
-          <div class="fxo-input-action-row">
-            <input type="text" id="f-linkedin" placeholder="https://www.linkedin.com/in/username">
-            <button class="fxo-btn fxo-btn-ghost fxo-btn-sm" id="btn-parse-profile">Auto-fill</button>
-          </div>
-          <div class="fxo-hint" id="parse-hint">Pasting the link extracts profile name and saves the direct URL to your pipeline.</div>
+          <label>LinkedIn Profile URL <span style="font-size:11px;color:var(--accent);font-weight:600;">● Unique Prospect Guard</span></label>
+          <input type="text" id="f-linkedin" placeholder="e.g. https://www.linkedin.com/in/username">
+          <div id="duplicate-warning" style="display:none;margin-top:7px;padding:9px 12px;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font-mono);line-height:1.45;"></div>
+          <div class="fxo-hint" id="linkedin-hint">Ensures no two team members reach the same prospect. Pasting a link instantly checks the team pipeline.</div>
         </div>
 
         <div class="fxo-row">
@@ -583,35 +581,89 @@
     renderHistory();
   }
 
-  // ---------- LINKEDIN AUTO-PARSER ----------
-  $('btn-parse-profile')?.addEventListener('click', async ()=>{
-    const url = $('f-linkedin').value.trim();
-    if(!url){
-      showToast('Please paste a LinkedIn profile URL first');
-      $('f-linkedin').focus();
+  // ---------- LINKEDIN UNIQUE PROSPECT GUARD ----------
+  function normalizeLinkedinUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    const trimmed = url.trim().toLowerCase();
+    const match = trimmed.match(/linkedin\.com\/in\/([a-z0-9_-]+)/i);
+    if (match && match[1]) {
+      const slug = match[1].replace(/\/.*$/, '').trim();
+      return `linkedin.com/in/${slug}`;
+    }
+    return trimmed.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('?')[0];
+  }
+
+  let duplicateDebounce = null;
+  let currentDuplicateLead = null;
+
+  async function checkDuplicateLinkedin(url) {
+    const warnBox = $('duplicate-warning');
+    const input = $('f-linkedin');
+    currentDuplicateLead = null;
+
+    if (!url || !url.trim()) {
+      warnBox.style.display = 'none';
+      input.style.borderColor = 'var(--border)';
       return;
     }
 
-    const hint = $('parse-hint');
-    hint.textContent = 'Extracting profile details...';
+    const normalized = normalizeLinkedinUrl(url);
 
-    try{
-      const res = await fetch('/api/parse-profile', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ url })
-      });
+    // 1. Instant check in local leads cache
+    const localMatch = leads.find(l => {
+      const existingNorm = normalizeLinkedinUrl(l.linkedinUrl);
+      return existingNorm && existingNorm === normalized;
+    });
 
-      const data = await res.json();
-      if(data.success){
-        if(data.name && !$('f-name').value) $('f-name').value = data.name;
-        if(data.headline && !$('f-headline').value) $('f-headline').value = data.headline;
-        hint.textContent = data.message;
-        showToast(data.name ? `Name auto-filled: ${data.name}` : 'URL registered');
-      }
-    }catch(e){
-      hint.textContent = 'Could not auto-extract details; please fill in headline manually.';
+    if (localMatch) {
+      currentDuplicateLead = localMatch;
+      showDuplicateAlert(localMatch);
+      return;
     }
+
+    // 2. Server check against MongoDB
+    try {
+      const res = await fetch(`/api/leads?checkUrl=${encodeURIComponent(url.trim())}`, {
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists && data.lead) {
+          currentDuplicateLead = data.lead;
+          showDuplicateAlert(data.lead);
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // No duplicate found
+    warnBox.style.display = 'block';
+    warnBox.style.background = 'var(--green-dim)';
+    warnBox.style.borderColor = 'rgba(74,222,128,0.3)';
+    warnBox.style.color = 'var(--green)';
+    warnBox.innerHTML = `✓ <b>Unique Prospect:</b> Not in pipeline yet. Safe to reach!`;
+    input.style.borderColor = 'var(--green)';
+  }
+
+  function showDuplicateAlert(lead) {
+    const warnBox = $('duplicate-warning');
+    const input = $('f-linkedin');
+    warnBox.style.display = 'block';
+    warnBox.style.background = 'var(--amber-dim)';
+    warnBox.style.borderColor = 'rgba(232,181,74,0.4)';
+    warnBox.style.color = 'var(--amber)';
+    warnBox.innerHTML = `⚠️ <b>Already in Pipeline!</b> This person is already being reached by <b>@${lead.createdBy}</b> (Stage: <b>${lead.status}</b>). Please coordinate with @${lead.createdBy} so no two people reach the same person.`;
+    input.style.borderColor = 'var(--amber)';
+  }
+
+  $('f-linkedin')?.addEventListener('input', (e) => {
+    clearTimeout(duplicateDebounce);
+    duplicateDebounce = setTimeout(() => {
+      checkDuplicateLinkedin(e.target.value);
+    }, 350);
+  });
+  $('f-linkedin')?.addEventListener('blur', (e) => {
+    checkDuplicateLinkedin(e.target.value);
   });
 
   // ---------- TABS ----------
@@ -743,6 +795,13 @@
   // ---------- SAVE TO PIPELINE ----------
   $('btn-save').addEventListener('click', async ()=>{
     if(!lastResult) return;
+
+    // Check duplicate lead confirmation
+    if (currentDuplicateLead) {
+      const proceed = confirm(`⚠️ Warning: This prospect is already in the pipeline (reached by @${currentDuplicateLead.createdBy} in stage "${currentDuplicateLead.status}"). Are you sure you want to add them again?`);
+      if (!proceed) return;
+    }
+
     setSyncStatus('Saving to MongoDB...', true);
 
     const leadId = Date.now().toString(36) + Math.random().toString(16).slice(2,6);
@@ -766,6 +825,14 @@
         body: JSON.stringify(newLead)
       });
 
+      if(res.status === 409){
+        const conflict = await res.json();
+        setSyncStatus('Duplicate blocked', false);
+        showError(conflict.error || 'Duplicate lead: this prospect is already in the pipeline.');
+        showToast('Duplicate prospect blocked');
+        return;
+      }
+
       if(res.ok){
         const data = await res.json();
         leads.unshift(data.lead);
@@ -784,6 +851,9 @@
         ['f-name','f-stack','f-headline','f-context','f-linkedin'].forEach(id=>{ if($(id)) $(id).value=''; });
         if($('f-connected')) $('f-connected').checked = false;
         $('result').classList.remove('active');
+        $('duplicate-warning').style.display = 'none';
+        $('f-linkedin').style.borderColor = 'var(--border)';
+        currentDuplicateLead = null;
         lastResult = null;
       } else {
         const err = await res.json();

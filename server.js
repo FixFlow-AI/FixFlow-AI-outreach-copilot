@@ -8,7 +8,6 @@ import authHandler from './api/auth.js';
 import leadsHandler from './api/leads.js';
 import historyHandler from './api/history.js';
 import generateHandler from './api/generate.js';
-import parseProfileHandler from './api/parse-profile.js';
 import { getDb } from './api/lib/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -40,7 +39,6 @@ app.all('/api/auth', wrapHandler(authHandler));
 app.all('/api/leads', wrapHandler(leadsHandler));
 app.all('/api/history', wrapHandler(historyHandler));
 app.all('/api/generate', wrapHandler(generateHandler));
-app.all('/api/parse-profile', wrapHandler(parseProfileHandler));
 
 // Serve frontend static files
 app.use(express.static(__dirname));
