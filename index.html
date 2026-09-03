@@ -1,233 +1,333 @@
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#0F131A;
-    --surface:#161B24;
-    --surface-2:#1D2430;
-    --border:#2A3242;
-    --border-soft:#232A38;
-    --text:#E9ECF3;
-    --text-dim:#98A2B8;
-    --text-faint:#5C6579;
-    --accent:#2DD4BF;
-    --accent-dim:rgba(45,212,191,0.14);
-    --accent-glow:rgba(45,212,191,0.35);
-    --amber:#E8B54A;
-    --amber-dim:rgba(232,181,74,0.14);
-    --blue:#5B9DF5;
-    --blue-dim:rgba(91,157,245,0.14);
-    --red:#F0716B;
-    --red-dim:rgba(240,113,107,0.14);
-    --green:#4ADE80;
-    --green-dim:rgba(74,222,128,0.14);
-    --radius:10px;
-    --radius-sm:6px;
-    --font-display:'Space Grotesk',system-ui,sans-serif;
-    --font-body:'Inter',system-ui,sans-serif;
-    --font-mono:'JetBrains Mono',ui-monospace,monospace;
-  }
-  *{box-sizing:border-box;}
-  .fxo{
-    background:var(--bg);
-    color:var(--text);
-    font-family:var(--font-body);
-    min-height:100%;
-    padding:0;
-    -webkit-font-smoothing:antialiased;
-  }
-  .fxo *:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  .fxo-shell{max-width:840px;margin:0 auto;padding:28px 20px 60px;}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FixFlow AI — Outreach Copilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0F131A;
+      --surface:#161B24;
+      --surface-2:#1D2430;
+      --surface-3:#242D3C;
+      --border:#2A3242;
+      --border-soft:#232A38;
+      --text:#E9ECF3;
+      --text-dim:#98A2B8;
+      --text-faint:#5C6579;
+      --accent:#2DD4BF;
+      --accent-dim:rgba(45,212,191,0.14);
+      --accent-glow:rgba(45,212,191,0.35);
+      --amber:#E8B54A;
+      --amber-dim:rgba(232,181,74,0.14);
+      --blue:#5B9DF5;
+      --blue-dim:rgba(91,157,245,0.14);
+      --red:#F0716B;
+      --red-dim:rgba(240,113,107,0.14);
+      --green:#4ADE80;
+      --green-dim:rgba(74,222,128,0.14);
+      --radius:10px;
+      --radius-sm:6px;
+      --font-display:'Space Grotesk',system-ui,sans-serif;
+      --font-body:'Inter',system-ui,sans-serif;
+      --font-mono:'JetBrains Mono',ui-monospace,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:var(--font-body);
+      min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+    }
+    *:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+    .fxo{min-height:100vh;display:flex;flex-direction:column;}
+    .fxo-shell{max-width:880px;margin:0 auto;padding:28px 20px 60px;width:100%;}
 
-  .fxo-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
-  .fxo-title{font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-0.01em;display:flex;align-items:center;gap:10px;}
-  .fxo-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-dim);flex-shrink:0;}
-  .fxo-sub{font-size:13px;color:var(--text-faint);margin-top:4px;font-family:var(--font-mono);}
+    /* Header */
+    .fxo-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
+    .fxo-title{font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-0.01em;display:flex;align-items:center;gap:10px;}
+    .fxo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-dim);flex-shrink:0;}
+    .fxo-sub{font-size:12.5px;color:var(--text-faint);margin-top:4px;font-family:var(--font-mono);}
 
-  .fxo-tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:3px;}
-  .fxo-tab{
-    font-family:var(--font-mono);font-size:12.5px;font-weight:500;letter-spacing:0.02em;
-    padding:8px 14px;border-radius:calc(var(--radius) - 3px);cursor:pointer;color:var(--text-dim);
-    border:none;background:transparent;transition:all .15s ease;
-  }
-  .fxo-tab.active{background:var(--surface-2);color:var(--text);box-shadow:inset 0 0 0 1px var(--border);}
-  .fxo-tab:hover:not(.active){color:var(--text);}
+    .fxo-header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .fxo-user-pill{
+      display:flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--border);
+      border-radius:20px;padding:5px 12px;font-family:var(--font-mono);font-size:11.5px;color:var(--text);
+    }
+    .fxo-user-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);}
+    .fxo-sync-pill{
+      display:flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+      background:var(--surface);border:1px solid var(--border-soft);padding:5px 10px;border-radius:20px;
+    }
+    .fxo-sync-pill.syncing{color:var(--amber);border-color:var(--amber-dim);}
 
-  .fxo-panel{display:none;}
-  .fxo-panel.active{display:block;animation:fxoFade .2s ease;}
-  @keyframes fxoFade{from{opacity:0;transform:translateY(2px);}to{opacity:1;transform:none;}}
+    .fxo-tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:3px;}
+    .fxo-tab{
+      font-family:var(--font-mono);font-size:12.5px;font-weight:500;letter-spacing:0.02em;
+      padding:8px 14px;border-radius:calc(var(--radius) - 3px);cursor:pointer;color:var(--text-dim);
+      border:none;background:transparent;transition:all .15s ease;display:inline-flex;align-items:center;gap:6px;
+    }
+    .fxo-tab.active{background:var(--surface-2);color:var(--text);box-shadow:inset 0 0 0 1px var(--border);}
+    .fxo-tab:hover:not(.active){color:var(--text);}
 
-  .fxo-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:20px;}
-  .fxo-card + .fxo-card{margin-top:14px;}
+    .fxo-panel{display:none;}
+    .fxo-panel.active{display:block;animation:fxoFade .2s ease;}
+    @keyframes fxoFade{from{opacity:0;transform:translateY(2px);}to{opacity:1;transform:none;}}
 
-  .fxo-field{margin-bottom:14px;}
-  .fxo-field label{display:block;font-size:12px;font-family:var(--font-mono);color:var(--text-dim);margin-bottom:6px;letter-spacing:0.01em;}
-  .fxo-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  @media(max-width:560px){.fxo-row{grid-template-columns:1fr;}}
-  .fxo-field input[type=text],.fxo-field textarea{
-    width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
-    padding:9px 11px;color:var(--text);font-family:var(--font-body);font-size:13.5px;resize:vertical;
-    transition:border-color .15s ease;
-  }
-  .fxo-field input[type=text]:focus,.fxo-field textarea:focus{border-color:var(--accent);}
-  .fxo-field textarea{min-height:56px;line-height:1.45;}
-  .fxo-hint{font-size:11.5px;color:var(--text-faint);margin-top:4px;}
+    .fxo-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:22px;}
+    .fxo-card + .fxo-card{margin-top:14px;}
 
-  .fxo-checkline{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);margin:2px 0 16px;}
-  .fxo-checkline input{accent-color:var(--accent);width:14px;height:14px;}
+    .fxo-field{margin-bottom:14px;}
+    .fxo-field label{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-family:var(--font-mono);color:var(--text-dim);margin-bottom:6px;letter-spacing:0.01em;}
+    .fxo-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media(max-width:580px){.fxo-row{grid-template-columns:1fr;}}
+    .fxo-field input[type=text],.fxo-field input[type=password],.fxo-field textarea,.fxo-field select{
+      width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+      padding:10px 12px;color:var(--text);font-family:var(--font-body);font-size:13.5px;resize:vertical;
+      transition:border-color .15s ease;
+    }
+    .fxo-field input:focus,.fxo-field textarea:focus,.fxo-field select:focus{border-color:var(--accent);}
+    .fxo-field textarea{min-height:60px;line-height:1.45;}
+    .fxo-hint{font-size:11.5px;color:var(--text-faint);margin-top:5px;line-height:1.4;}
 
-  .fxo-btn{
-    font-family:var(--font-mono);font-size:12.5px;font-weight:600;letter-spacing:0.02em;
-    border-radius:var(--radius-sm);padding:10px 16px;border:1px solid transparent;cursor:pointer;
-    transition:all .15s ease;display:inline-flex;align-items:center;gap:7px;
-  }
-  .fxo-btn-primary{background:var(--accent);color:#08211D;}
-  .fxo-btn-primary:hover{box-shadow:0 0 0 4px var(--accent-dim);}
-  .fxo-btn-primary:disabled{opacity:0.5;cursor:not-allowed;box-shadow:none;}
-  .fxo-btn-ghost{background:transparent;border-color:var(--border);color:var(--text-dim);}
-  .fxo-btn-ghost:hover{color:var(--text);border-color:var(--text-faint);}
-  .fxo-btn-sm{padding:6px 10px;font-size:11px;}
+    .fxo-input-action-row{display:flex;gap:8px;}
+    .fxo-input-action-row input{flex:1;}
 
-  .fxo-loading{display:none;align-items:center;gap:8px;color:var(--text-dim);font-family:var(--font-mono);font-size:12px;margin-top:10px;}
-  .fxo-loading.active{display:flex;}
-  .fxo-spin{width:12px;height:12px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:fxoSpin .7s linear infinite;}
-  @keyframes fxoSpin{to{transform:rotate(360deg);}}
+    .fxo-checkline{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);margin:4px 0 18px;}
+    .fxo-checkline input{accent-color:var(--accent);width:15px;height:15px;}
 
-  .fxo-error{display:none;color:var(--red);font-size:12.5px;margin-top:10px;font-family:var(--font-mono);}
-  .fxo-error.active{display:block;}
+    .fxo-btn{
+      font-family:var(--font-mono);font-size:12.5px;font-weight:600;letter-spacing:0.02em;
+      border-radius:var(--radius-sm);padding:10px 16px;border:1px solid transparent;cursor:pointer;
+      transition:all .15s ease;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+    }
+    .fxo-btn-primary{background:var(--accent);color:#08211D;}
+    .fxo-btn-primary:hover{box-shadow:0 0 0 4px var(--accent-dim);}
+    .fxo-btn-primary:disabled{opacity:0.5;cursor:not-allowed;box-shadow:none;}
+    .fxo-btn-ghost{background:transparent;border-color:var(--border);color:var(--text-dim);}
+    .fxo-btn-ghost:hover{color:var(--text);border-color:var(--text-faint);}
+    .fxo-btn-danger{background:transparent;border-color:var(--red-dim);color:var(--red);}
+    .fxo-btn-danger:hover{background:var(--red-dim);}
+    .fxo-btn-sm{padding:6px 11px;font-size:11.5px;}
 
-  .fxo-result{display:none;margin-top:18px;}
-  .fxo-result.active{display:block;animation:fxoFade .25s ease;}
-  .fxo-msgblock{border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:14px;background:var(--bg);margin-bottom:10px;}
-  .fxo-msghead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-  .fxo-msglabel{font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.03em;}
-  .fxo-msgcount{font-family:var(--font-mono);font-size:10.5px;color:var(--text-faint);}
-  .fxo-msgcount.over{color:var(--red);}
-  .fxo-msgtext{font-size:13.5px;line-height:1.55;color:var(--text);white-space:pre-wrap;}
+    .fxo-loading{display:none;align-items:center;gap:8px;color:var(--text-dim);font-family:var(--font-mono);font-size:12px;margin-top:12px;}
+    .fxo-loading.active{display:flex;}
+    .fxo-spin{width:13px;height:13px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:fxoSpin .7s linear infinite;}
+    @keyframes fxoSpin{to{transform:rotate(360deg);}}
 
-  .fxo-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}
+    .fxo-error{display:none;color:var(--red);font-size:12.5px;margin-top:12px;font-family:var(--font-mono);background:var(--red-dim);padding:8px 12px;border-radius:var(--radius-sm);border:1px solid rgba(240,113,107,0.3);}
+    .fxo-error.active{display:block;}
 
-  /* Pipeline */
-  .fxo-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
-  .fxo-stat{
-    background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-sm);
-    padding:8px 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
-    display:flex;align-items:center;gap:6px;
-  }
-  .fxo-stat b{color:var(--text);font-size:13px;}
+    .fxo-result{display:none;margin-top:20px;}
+    .fxo-result.active{display:block;animation:fxoFade .25s ease;}
+    .fxo-msgblock{border:1px solid var(--border-soft);border-radius:var(--radius-sm);padding:14px 16px;background:var(--bg);margin-bottom:12px;}
+    .fxo-msghead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+    .fxo-msglabel{font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.04em;font-weight:600;}
+    .fxo-msgcount{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);}
+    .fxo-msgcount.over{color:var(--red);}
+    .fxo-msgtext{font-size:13.5px;line-height:1.6;color:var(--text);white-space:pre-wrap;}
 
-  .fxo-toolbar{display:flex;gap:8px;margin-bottom:14px;}
-  .fxo-toolbar input,.fxo-toolbar select{
-    background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-sm);
-    color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 10px;
-  }
-  .fxo-toolbar input{flex:1;}
+    .fxo-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}
 
-  .fxo-lead{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:16px;margin-bottom:10px;}
-  .fxo-lead-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
-  .fxo-lead-name{font-family:var(--font-display);font-weight:600;font-size:15px;}
-  .fxo-lead-id{font-family:var(--font-mono);font-size:10.5px;color:var(--accent);opacity:0.75;margin-left:8px;}
-  .fxo-lead-meta{font-size:12.5px;color:var(--text-dim);margin-top:3px;}
-  .fxo-lead-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
-  .fxo-tag{font-family:var(--font-mono);font-size:10.5px;padding:3px 8px;border-radius:20px;background:var(--surface-2);color:var(--text-dim);border:1px solid var(--border-soft);}
+    /* Pipeline */
+    .fxo-stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+    .fxo-stat{
+      background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-sm);
+      padding:8px 12px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+      display:flex;align-items:center;gap:6px;
+    }
+    .fxo-stat b{color:var(--text);font-size:13px;}
 
-  .fxo-status-select{
-    font-family:var(--font-mono);font-size:11px;font-weight:600;border-radius:20px;padding:5px 10px;
-    border:1px solid transparent;cursor:pointer;appearance:none;-webkit-appearance:none;
-    background-repeat:no-repeat;background-position:right 8px center;padding-right:24px;
-  }
-  .fxo-lead-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;}
-  .fxo-lead-actions{display:flex;gap:6px;}
-  .fxo-link-btn{background:none;border:none;color:var(--text-faint);font-family:var(--font-mono);font-size:11px;cursor:pointer;padding:4px 6px;}
-  .fxo-link-btn:hover{color:var(--text);}
+    .fxo-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+    .fxo-toolbar input,.fxo-toolbar select{
+      background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius-sm);
+      color:var(--text);font-family:var(--font-body);font-size:13px;padding:8px 12px;
+    }
+    .fxo-toolbar input{flex:1;min-width:200px;}
 
-  .fxo-lead-detail{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft);}
-  .fxo-lead-detail.active{display:block;}
-  .fxo-lead-detail textarea{
-    width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
-    color:var(--text);font-size:12.5px;padding:8px;min-height:44px;font-family:var(--font-body);margin-top:10px;
-  }
+    .fxo-lead{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;}
+    .fxo-lead-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+    .fxo-lead-name{font-family:var(--font-display);font-weight:600;font-size:15.5px;}
+    .fxo-lead-id{font-family:var(--font-mono);font-size:10.5px;color:var(--accent);opacity:0.8;margin-left:8px;}
+    .fxo-lead-link{color:var(--blue);font-size:11.5px;font-family:var(--font-mono);text-decoration:none;margin-left:8px;}
+    .fxo-lead-link:hover{text-decoration:underline;}
+    .fxo-lead-meta{font-size:12.5px;color:var(--text-dim);margin-top:4px;line-height:1.4;}
+    .fxo-lead-tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center;}
+    .fxo-tag{font-family:var(--font-mono);font-size:10.5px;padding:3px 8px;border-radius:20px;background:var(--surface-2);color:var(--text-dim);border:1px solid var(--border-soft);}
+    .fxo-tag-user{background:var(--accent-dim);color:var(--accent);border-color:rgba(45,212,191,0.25);}
+    .fxo-tag-updated{background:var(--amber-dim);color:var(--amber);border-color:rgba(232,181,74,0.25);}
 
-  .fxo-empty{text-align:center;padding:50px 20px;color:var(--text-faint);}
-  .fxo-empty svg{opacity:0.4;margin-bottom:10px;}
-  .fxo-empty p{font-size:13px;font-family:var(--font-mono);}
+    .fxo-status-select{
+      font-family:var(--font-mono);font-size:11px;font-weight:600;border-radius:20px;padding:6px 12px;
+      border:1px solid transparent;cursor:pointer;appearance:none;-webkit-appearance:none;
+      background-repeat:no-repeat;background-position:right 8px center;padding-right:24px;
+    }
+    .fxo-lead-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;border-top:1px solid var(--border-soft);padding-top:10px;}
+    .fxo-lead-actions{display:flex;gap:8px;}
+    .fxo-link-btn{background:none;border:none;color:var(--text-faint);font-family:var(--font-mono);font-size:11.5px;cursor:pointer;padding:4px 6px;}
+    .fxo-link-btn:hover{color:var(--text);}
 
-  .fxo-footnote{margin-top:26px;padding-top:16px;border-top:1px solid var(--border-soft);font-size:11.5px;color:var(--text-faint);line-height:1.6;font-family:var(--font-mono);}
-  .fxo-footnote strong{color:var(--text-dim);}
+    .fxo-lead-detail{display:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--border-soft);}
+    .fxo-lead-detail.active{display:block;}
+    .fxo-lead-detail textarea{
+      width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+      color:var(--text);font-size:12.5px;padding:9px;min-height:48px;font-family:var(--font-body);margin-top:6px;
+    }
 
-  .fxo-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:12px;display:inline-flex;align-items:center;margin-left:8px;vertical-align:middle;font-weight:600;}
-  .fxo-badge-saved{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(45,212,191,0.25);}
-  .fxo-badge-unsaved{background:var(--surface-2);color:var(--text-faint);border:1px solid var(--border-soft);}
+    .fxo-empty{text-align:center;padding:50px 20px;color:var(--text-faint);}
+    .fxo-empty p{font-size:13px;font-family:var(--font-mono);margin-top:6px;}
 
-  .fxo-toast{
-    position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);
-    background:var(--surface-2);border:1px solid var(--accent);color:var(--text);
-    padding:9px 16px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:12px;
-    opacity:0;transition:all .25s ease;pointer-events:none;z-index:50;
-  }
-  .fxo-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-</style>
+    .fxo-footnote{margin-top:26px;padding-top:16px;border-top:1px solid var(--border-soft);font-size:11.5px;color:var(--text-faint);line-height:1.6;font-family:var(--font-mono);}
+    .fxo-footnote strong{color:var(--text-dim);}
+
+    .fxo-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:12px;display:inline-flex;align-items:center;margin-left:8px;vertical-align:middle;font-weight:600;}
+    .fxo-badge-saved{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(45,212,191,0.25);}
+    .fxo-badge-unsaved{background:var(--surface-2);color:var(--text-faint);border:1px solid var(--border-soft);}
+
+    .fxo-toast{
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+      background:var(--surface-2);border:1px solid var(--accent);color:var(--text);
+      padding:10px 18px;border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:12px;
+      opacity:0;transition:all .25s ease;pointer-events:none;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.5);
+    }
+    .fxo-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    /* Full-Screen Login Modal */
+    .fxo-modal-overlay{
+      position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,19,26,0.85);backdrop-filter:blur(8px);
+      display:flex;align-items:center;justify-content:center;z-index:9000;padding:20px;
+    }
+    .fxo-login-box{
+      background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:32px 28px;width:100%;max-width:400px;box-shadow:0 16px 40px rgba(0,0,0,0.6);animation:fxoFade .25s ease;
+    }
+    .fxo-login-title{font-family:var(--font-display);font-weight:700;font-size:20px;display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+    .fxo-login-sub{font-family:var(--font-mono);font-size:12px;color:var(--text-faint);margin-bottom:22px;}
+    .fxo-login-error{display:none;background:var(--red-dim);color:var(--red);border:1px solid rgba(240,113,107,0.3);padding:8px 12px;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font-mono);margin-bottom:14px;}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN MODAL -->
+<div class="fxo-modal-overlay" id="login-modal" style="display:none;">
+  <div class="fxo-login-box">
+    <div class="fxo-login-title">
+      <span class="fxo-dot"></span>FixFlow Outreach Copilot
+    </div>
+    <div class="fxo-login-sub">Authorized team access only · 7-day secure JWT</div>
+    <div class="fxo-login-error" id="login-error"></div>
+
+    <form id="login-form">
+      <div class="fxo-field">
+        <label>Username</label>
+        <input type="text" id="login-user" placeholder="e.g. suvam, arijit, ritesh" required autocomplete="username" autofocus>
+      </div>
+      <div class="fxo-field">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="Enter your authorized password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="fxo-btn fxo-btn-primary" id="btn-login-submit" style="width:100%;justify-content:center;margin-top:10px;">
+        Sign In to Copilot
+      </button>
+      <div class="fxo-hint" style="text-align:center;margin-top:14px;">
+        Pipeline & history persist directly to MongoDB.
+      </div>
+    </form>
+  </div>
+</div>
 
 <div class="fxo">
   <div class="fxo-shell">
+    <!-- APP HEADER -->
     <div class="fxo-header">
       <div>
         <div class="fxo-title"><span class="fxo-dot"></span>Outreach Copilot</div>
-        <div class="fxo-sub">fixflow · freelancer onboarding · gemini 3.5 flash lite</div>
+        <div class="fxo-sub">fixflow · developer onboarding · mongodb persistence</div>
       </div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <div class="fxo-tabs">
-          <button class="fxo-tab active" data-tab="draft">Draft</button>
-          <button class="fxo-tab" data-tab="pipeline">Pipeline <span id="fxo-pipe-count"></span></button>
-          <button class="fxo-tab" data-tab="history">History <span id="fxo-hist-count"></span></button>
+      <div class="fxo-header-actions">
+        <div class="fxo-sync-pill" id="sync-status">
+          <span class="fxo-user-dot" style="background:var(--accent);box-shadow:0 0 6px var(--accent);"></span>
+          <span id="sync-text">MongoDB Connected</span>
         </div>
+        <div class="fxo-user-pill" id="user-badge" style="display:none;">
+          <span class="fxo-user-dot"></span>
+          <span id="user-name-display">user</span>
+        </div>
+        <button class="fxo-btn fxo-btn-ghost fxo-btn-sm" id="btn-logout" title="Sign out" style="display:none;">
+          Logout
+        </button>
         <button class="fxo-tab" id="btn-key-toggle" title="Gemini API Key Settings" style="padding:8px 10px;display:flex;align-items:center;gap:4px;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-1.5 6.1L16 11l-1.5-1.5 1.5-1.5L14.6 6.6l1.5-1.5-1.4-1.4a5.5 5.5 0 1 0-7.78 7.78l10.6 10.6a2.5 2.5 0 0 0 3.54-3.54L17.5 14.5z"/></svg>
         </button>
       </div>
     </div>
 
+    <!-- TABS NAVIGATION -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="fxo-tabs">
+        <button class="fxo-tab active" data-tab="draft">Draft</button>
+        <button class="fxo-tab" data-tab="pipeline">Team Pipeline <span id="fxo-pipe-count"></span></button>
+        <button class="fxo-tab" data-tab="history">History <span id="fxo-hist-count"></span></button>
+      </div>
+    </div>
+
     <!-- API KEY CONFIG -->
     <div id="key-config" class="fxo-card" style="display:none;margin-bottom:14px;border-color:var(--accent-dim);">
       <div class="fxo-field" style="margin-bottom:6px;">
-        <label>Google Gemini API Key (Model: gemini-3.5-flash-lite)</label>
+        <label>Google Gemini API Key</label>
         <div style="display:flex;gap:8px;">
-          <input type="password" id="f-apikey" placeholder="Enter your Gemini API key (AIzaSy...)" style="flex:1;">
+          <input type="password" id="f-apikey" placeholder="AIzaSy... (optional if GEMINI_API_KEY is configured on server)" style="flex:1;">
           <button class="fxo-btn fxo-btn-primary fxo-btn-sm" id="btn-save-key">Save Key</button>
         </div>
-        <div class="fxo-hint">Optional if <code>GEMINI_API_KEY</code> is set in Vercel environment variables. Saved in browser local storage for direct runs.</div>
+        <div class="fxo-hint">If set on the server or in .env, the backend generates automatically. You can also save a personal key in browser local storage.</div>
       </div>
     </div>
 
     <!-- DRAFT PANEL -->
     <div class="fxo-panel active" id="panel-draft">
       <div class="fxo-card">
+        <!-- LinkedIn URL Input with Auto-Fill -->
+        <div class="fxo-field">
+          <label>LinkedIn Profile URL (Optional auto-extractor)</label>
+          <div class="fxo-input-action-row">
+            <input type="text" id="f-linkedin" placeholder="https://www.linkedin.com/in/username">
+            <button class="fxo-btn fxo-btn-ghost fxo-btn-sm" id="btn-parse-profile">Auto-fill</button>
+          </div>
+          <div class="fxo-hint" id="parse-hint">Pasting the link extracts profile name and saves the direct URL to your pipeline.</div>
+        </div>
+
         <div class="fxo-row">
           <div class="fxo-field">
             <label>Name</label>
-            <input type="text" id="f-name" placeholder="e.g. Ananya Rao">
+            <input type="text" id="f-name" placeholder="e.g. Vikram Mehta">
           </div>
           <div class="fxo-field">
             <label>Primary stack / skill</label>
-            <input type="text" id="f-stack" placeholder="e.g. React + Node, backend Go">
+            <input type="text" id="f-stack" placeholder="e.g. Rust + Go, Distributed DBs">
           </div>
         </div>
+
         <div class="fxo-field">
           <label>Headline / bio (paste from LinkedIn)</label>
-          <textarea id="f-headline" placeholder="e.g. Full-stack developer · 4 yrs · building fintech tools · ex-Razorpay"></textarea>
+          <textarea id="f-headline" placeholder="e.g. Senior Backend Architect · Distributed Systems · Ex-Swiggy"></textarea>
         </div>
+
         <div class="fxo-field">
-          <label>Specific hook (optional but makes it 10x better)</label>
-          <textarea id="f-context" placeholder="e.g. their pinned repo is a Razorpay webhook library, or they posted about hating unpaid client work"></textarea>
-          <div class="fxo-hint">Something real and specific about them — a repo, a post, a mutual connection. Never invented.</div>
+          <label>Specific hook (makes it 10x more genuine)</label>
+          <textarea id="f-context" placeholder="e.g. Posted about client milestone payment disputes, or created a Raft consensus repo"></textarea>
+          <div class="fxo-hint">Something specific about their work. Never invented.</div>
         </div>
+
         <label class="fxo-checkline">
           <input type="checkbox" id="f-connected">
-          Already a 1st-degree connection (skip the connection note, just draft the DM)
+          Already a 1st-degree connection (skip invite note, draft direct DM only)
         </label>
 
         <button class="fxo-btn fxo-btn-primary" id="btn-generate">Generate draft</button>
-        <div class="fxo-loading" id="loading"><span class="fxo-spin"></span>Writing...</div>
+        <div class="fxo-loading" id="loading"><span class="fxo-spin"></span>Writing authentic outreach...</div>
         <div class="fxo-error" id="error"></div>
 
         <div class="fxo-result" id="result">
@@ -237,21 +337,22 @@
               <span class="fxo-msgcount" id="note-count"></span>
             </div>
             <div class="fxo-msgtext" id="note-text"></div>
-            <div class="fxo-actions"><button class="fxo-btn fxo-btn-ghost fxo-btn-sm" data-copy="note-text">Copy</button></div>
+            <div class="fxo-actions"><button class="fxo-btn fxo-btn-ghost fxo-btn-sm" data-copy="note-text">Copy Note</button></div>
           </div>
           <div class="fxo-msgblock">
-            <div class="fxo-msghead"><span class="fxo-msglabel">DM / FOLLOW-UP</span></div>
+            <div class="fxo-msghead"><span class="fxo-msglabel">DM / FOLLOW-UP MESSAGE</span></div>
             <div class="fxo-msgtext" id="dm-text"></div>
-            <div class="fxo-actions"><button class="fxo-btn fxo-btn-ghost fxo-btn-sm" data-copy="dm-text">Copy</button></div>
+            <div class="fxo-actions"><button class="fxo-btn fxo-btn-ghost fxo-btn-sm" data-copy="dm-text">Copy DM</button></div>
           </div>
           <div class="fxo-actions">
-            <button class="fxo-btn fxo-btn-primary" id="btn-save">Save to pipeline</button>
+            <button class="fxo-btn fxo-btn-primary" id="btn-save">Save to Team Pipeline</button>
             <button class="fxo-btn fxo-btn-ghost" id="btn-regen">Regenerate</button>
           </div>
         </div>
       </div>
+
       <div class="fxo-footnote">
-        <strong>How this is meant to be used:</strong> you paste in one lead, review the draft, then copy it into LinkedIn yourself and hit send by hand. Nothing here touches your LinkedIn account or sends anything automatically — that's deliberate. Stay well under LinkedIn's weekly invite cap and prioritize quality over volume; low-and-slow personalized outreach consistently outperforms bulk sends anyway.
+        <strong>FixFlow AI Outreach Philosophy:</strong> Peer-to-peer developer outreach. Zero corporate fluff, zero hard sales pitches. Speak to real freelance friction (milestone security, verified skills vs bidding wars), link fixflowai.xyz naturally, and send invites manually by hand.
       </div>
     </div>
 
@@ -259,8 +360,15 @@
     <div class="fxo-panel" id="panel-pipeline">
       <div class="fxo-stats" id="stats"></div>
       <div class="fxo-toolbar">
-        <input type="text" id="search" placeholder="Search by name or stack...">
+        <input type="text" id="search" placeholder="Search team pipeline by name, stack, or notes...">
         <select id="filter-status"><option value="">All stages</option></select>
+        <select id="filter-user">
+          <option value="">All Team Members</option>
+          <option value="me">My Leads</option>
+          <option value="suvam">@suvam</option>
+          <option value="arijit">@arijit</option>
+          <option value="ritesh">@ritesh</option>
+        </select>
       </div>
       <div id="lead-list"></div>
     </div>
@@ -291,99 +399,222 @@
     {v:'No Response', c:'var(--text-faint)', bg:'var(--surface-2)'},
     {v:'Not Interested', c:'var(--red)', bg:'var(--red-dim)'}
   ];
-  const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+
+  const TOKEN_KEY = 'fixflow_token';
   const API_KEY_STORAGE = 'fixflow-gemini-key';
-  const STORAGE_KEY_LEADS = 'fixflow-leads';
-  const STORAGE_KEY_HISTORY = 'fixflow-history';
+  const STORAGE_KEY_LEADS = 'fixflow-leads-cache';
+  const STORAGE_KEY_HISTORY = 'fixflow-history-cache';
   const STORAGE_KEY_DRAFT = 'fixflow-last-draft';
 
+  let currentUser = null;
   let leads = [];
   let history = [];
   let lastResult = null;
 
   const $ = (id) => document.getElementById(id);
 
+  function getToken(){
+    return localStorage.getItem(TOKEN_KEY) || '';
+  }
+
   function getApiKey(){
-    return localStorage.getItem(API_KEY_STORAGE) || window.GEMINI_API_KEY || '';
+    return localStorage.getItem(API_KEY_STORAGE) || '';
   }
 
-  function loadLocal(key, defaultVal){
+  function getAuthHeaders(){
+    const token = getToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    return headers;
+  }
+
+  function setSyncStatus(text, syncing = false){
+    const pill = $('sync-status');
+    const label = $('sync-text');
+    if(!pill || !label) return;
+    label.textContent = text;
+    pill.classList.toggle('syncing', syncing);
+  }
+
+  function showToast(msg){
+    const t = $('toast');
+    if(!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2000);
+  }
+
+  function showError(msg){
+    const el = $('error');
+    if(!el) return;
+    el.textContent = msg;
+    el.classList.toggle('active', !!msg);
+  }
+
+  // ---------- AUTHENTICATION ----------
+  async function checkAuthSession(){
+    const token = getToken();
+    if(!token){
+      showLoginModal(true);
+      return false;
+    }
+
     try{
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : defaultVal;
-    }catch(e){
-      return defaultVal;
+      const res = await fetch('/api/auth', {
+        headers: getAuthHeaders()
+      });
+
+      if(res.ok){
+        const data = await res.json();
+        currentUser = data.user;
+        updateUserUI();
+        showLoginModal(false);
+        return true;
+      } else {
+        localStorage.removeItem(TOKEN_KEY);
+        currentUser = null;
+        showLoginModal(true);
+        return false;
+      }
+    }catch(err){
+      // If network offline, try local fallback
+      showLoginModal(false);
+      return true;
     }
   }
 
-  function saveLocal(key, val){
+  function showLoginModal(show){
+    const modal = $('login-modal');
+    if(modal) modal.style.display = show ? 'flex' : 'none';
+  }
+
+  function updateUserUI(){
+    if(currentUser){
+      $('user-badge').style.display = 'flex';
+      $('btn-logout').style.display = 'inline-flex';
+      $('user-name-display').textContent = `@${currentUser.username}`;
+    }else{
+      $('user-badge').style.display = 'none';
+      $('btn-logout').style.display = 'none';
+    }
+  }
+
+  $('login-form')?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const errEl = $('login-error');
+    errEl.style.display = 'none';
+    const submitBtn = $('btn-login-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in...';
+
+    const username = $('login-user').value.trim();
+    const password = $('login-pass').value.trim();
+
     try{
-      localStorage.setItem(key, JSON.stringify(val));
-      if(window.storage && window.storage.set){
-        window.storage.set(key, JSON.stringify(val), false).catch(()=>{});
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+      if(!res.ok){
+        throw new Error(data.error || 'Authentication failed');
+      }
+
+      localStorage.setItem(TOKEN_KEY, data.token);
+      currentUser = data.user;
+      updateUserUI();
+      showLoginModal(false);
+      showToast(`Signed in as @${currentUser.username}`);
+      await loadAllDataFromDB();
+    }catch(err){
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+    }finally{
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Sign In to Copilot';
+    }
+  });
+
+  $('btn-logout')?.addEventListener('click', ()=>{
+    if(confirm('Are you sure you want to sign out?')){
+      localStorage.removeItem(TOKEN_KEY);
+      currentUser = null;
+      updateUserUI();
+      showLoginModal(true);
+      showToast('Signed out');
+    }
+  });
+
+  // ---------- MONGODB DATA SYNC ----------
+  async function loadAllDataFromDB(){
+    setSyncStatus('Syncing MongoDB...', true);
+
+    // 1. Leads
+    try{
+      const res = await fetch('/api/leads', { headers: getAuthHeaders() });
+      if(res.ok){
+        const data = await res.json();
+        leads = data.leads || [];
+        localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(leads));
+      } else if(res.status === 401){
+        showLoginModal(true);
+        return;
       }
     }catch(e){
-      console.warn('Storage save failed:', e);
-    }
-  }
-
-  // ---------- storage initialization ----------
-  async function loadAllData(){
-    // 1. Leads from localStorage with window.storage fallback
-    leads = loadLocal(STORAGE_KEY_LEADS, []);
-    if(leads.length === 0 && window.storage && window.storage.get){
-      try{
-        const res = await window.storage.get(STORAGE_KEY_LEADS, false);
-        if(res && res.value) leads = JSON.parse(res.value);
-      }catch(e){}
+      try{ leads = JSON.parse(localStorage.getItem(STORAGE_KEY_LEADS) || '[]'); }catch(err){}
     }
 
-    // 2. Generation History
-    history = loadLocal(STORAGE_KEY_HISTORY, []);
-    if(history.length === 0 && window.storage && window.storage.get){
-      try{
-        const res = await window.storage.get(STORAGE_KEY_HISTORY, false);
-        if(res && res.value) history = JSON.parse(res.value);
-      }catch(e){}
-    }
-
-    // 3. Restore draft form state & last result if any
-    const savedDraft = loadLocal(STORAGE_KEY_DRAFT, null);
-    if(savedDraft){
-      if(savedDraft.form){
-        if($('f-name')) $('f-name').value = savedDraft.form.name || '';
-        if($('f-stack')) $('f-stack').value = savedDraft.form.stack || '';
-        if($('f-headline')) $('f-headline').value = savedDraft.form.headline || '';
-        if($('f-context')) $('f-context').value = savedDraft.form.context || '';
-        if($('f-connected')) $('f-connected').checked = !!savedDraft.form.connected;
+    // 2. History
+    try{
+      const res = await fetch('/api/history', { headers: getAuthHeaders() });
+      if(res.ok){
+        const data = await res.json();
+        history = data.history || [];
+        localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
       }
-      if(savedDraft.result && savedDraft.result.note){
-        lastResult = savedDraft.result;
-        renderResult(lastResult);
-      }
+    }catch(e){
+      try{ history = JSON.parse(localStorage.getItem(STORAGE_KEY_HISTORY) || '[]'); }catch(err){}
     }
 
+    setSyncStatus('MongoDB Synced', false);
     renderPipeline();
     renderHistory();
   }
 
-  function saveDraftFormState(){
-    const form = {
-      name: $('f-name')?.value || '',
-      stack: $('f-stack')?.value || '',
-      headline: $('f-headline')?.value || '',
-      context: $('f-context')?.value || '',
-      connected: $('f-connected')?.checked || false
-    };
-    saveLocal(STORAGE_KEY_DRAFT, { form, result: lastResult });
-  }
+  // ---------- LINKEDIN AUTO-PARSER ----------
+  $('btn-parse-profile')?.addEventListener('click', async ()=>{
+    const url = $('f-linkedin').value.trim();
+    if(!url){
+      showToast('Please paste a LinkedIn profile URL first');
+      $('f-linkedin').focus();
+      return;
+    }
 
-  ['f-name', 'f-stack', 'f-headline', 'f-context'].forEach(id => {
-    $(id)?.addEventListener('input', saveDraftFormState);
+    const hint = $('parse-hint');
+    hint.textContent = 'Extracting profile details...';
+
+    try{
+      const res = await fetch('/api/parse-profile', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ url })
+      });
+
+      const data = await res.json();
+      if(data.success){
+        if(data.name && !$('f-name').value) $('f-name').value = data.name;
+        if(data.headline && !$('f-headline').value) $('f-headline').value = data.headline;
+        hint.textContent = data.message;
+        showToast(data.name ? `Name auto-filled: ${data.name}` : 'URL registered');
+      }
+    }catch(e){
+      hint.textContent = 'Could not auto-extract details; please fill in headline manually.';
+    }
   });
-  $('f-connected')?.addEventListener('change', saveDraftFormState);
 
-  // ---------- tabs ----------
+  // ---------- TABS ----------
   document.querySelectorAll('.fxo-tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
       if(tab.id === 'btn-key-toggle') return;
@@ -395,7 +626,7 @@
     });
   });
 
-  // ---------- generate with Gemini 3.5 Flash Lite ----------
+  // ---------- GENERATE AI DRAFT ----------
   $('btn-generate').addEventListener('click', generate);
   $('btn-regen').addEventListener('click', generate);
 
@@ -404,10 +635,11 @@
     const headline = $('f-headline').value.trim();
     const stack = $('f-stack').value.trim();
     const context = $('f-context').value.trim();
+    const linkedinUrl = $('f-linkedin').value.trim();
     const connected = $('f-connected').checked;
 
     if(!name || !headline){
-      showError('Add at least a name and headline — the draft needs something real to work with.');
+      showError('Add at least a name and headline — the draft needs real context to work with.');
       return;
     }
 
@@ -416,141 +648,66 @@
     $('loading').classList.add('active');
     $('btn-generate').disabled = true;
 
-    const payload = { name, headline, stack, context, connected };
-    const clientKey = getApiKey();
-    let parsed = null;
+    const payload = {
+      name,
+      headline,
+      stack,
+      context,
+      linkedinUrl,
+      connected,
+      apiKey: getApiKey()
+    };
 
     try{
-      // 1. If running on a web host (e.g. Vercel), attempt to call the serverless /api/generate endpoint using process.env.GEMINI_API_KEY
-      const isHttp = window.location.protocol.startsWith('http');
-      let usedServerApi = false;
+      const apiRes = await fetch('/api/generate', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
 
-      if(isHttp && !clientKey){
-        try{
-          const apiRes = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if(apiRes.ok){
-            parsed = await apiRes.json();
-            usedServerApi = true;
-          } else if(apiRes.status !== 404){
-            const errData = await apiRes.json().catch(()=>({}));
-            throw new Error(errData.error || `Server error (${apiRes.status})`);
-          }
-        }catch(serverErr){
-          if(serverErr.message && (serverErr.message.includes('GEMINI_API_KEY') || !clientKey)){
-            throw serverErr;
-          }
-        }
+      if(apiRes.status === 401){
+        showLoginModal(true);
+        throw new Error('Session expired. Please sign in again.');
       }
 
-      // 2. Direct client-side Gemini API call if not handled by /api/generate
-      if(!usedServerApi && !parsed){
-        const apiKey = clientKey;
-        if(!apiKey){
-          $('key-config').style.display = 'block';
-          $('f-apikey').focus();
-          throw new Error('Please configure GEMINI_API_KEY in your Vercel Project Settings or enter your Gemini API key above.');
-        }
-
-        const system = `You write genuine, clear, peer-to-peer LinkedIn outreach for FixFlow AI (website: fixflowai.xyz).
-
-About FixFlow AI:
-FixFlow AI helps freelance software developers—especially backend and full-stack engineers—get hired on merit and eliminate freelance friction:
-1. GitHub-Verified Skills Profiles: Proves deep technical ability from actual repositories, commits, and code architecture (rather than unverified self-written resume fluff).
-2. Escrow-Protected Milestone Payments: Guarantees payment on milestone completion, eliminating client payment delays, non-payment, and ghosting.
-3. Quality Over Bidding Wars: Helps high-skill developers stand out without competing against noisy, low-quality proposals in a race to the bottom.
-
-Given details about one person, generate two distinct, high-quality, and well-structured messages:
-
-1. connection_note (for a NEW LinkedIn invite):
-   - Strict hard limit: under 280 characters total.
-   - Plain text, 1-2 concise sentences, no line breaks.
-   - Mention one specific, real detail about them (their stack, recent project/repo, or technical focus).
-   - Warm, authentic, peer-to-peer, and zero sales pitch.
-
-2. dm_message (for someone already connected, or after they accept your invite):
-   - Format cleanly into 3 short, well-structured, scannable paragraphs separated by blank lines (\\n\\n):
-     • Paragraph 1 (Genuine Personal Hook): Direct, friendly greeting referencing their specific work, stack, or experience in an authentic way.
-     • Paragraph 2 (Relatable Developer Problem & FixFlow Solution): Speak directly to their technical/freelancing reality. If they do backend or freelance work, highlight their specific friction (e.g. backend architecture & code quality being invisible on standard resumes, client milestone/payment security, or filtering through bidding noise). Briefly explain how FixFlow solves this with GitHub-verified repo profiles and escrow milestones.
-     • Paragraph 3 (Low-Pressure Invitation): A polite, low-friction invitation to check out fixflowai.xyz and view/claim their verified profile if they're curious, with no aggressive sales pressure.
-     • Sign-off.
-
-Quality Rules:
-- Structure the DM with clean double line breaks between paragraphs so it is immediately legible and comfortable to read.
-- Include fixflowai.xyz naturally in the final paragraph.
-- Tone: Humble, direct, and technical—like one engineer or founder messaging another engineer.
-- Avoid all corporate fluff, marketing jargon, and buzzwords (e.g., game-changer, revolutionary, seamless, synergy, 10x).
-- No emojis, and at most one exclamation mark across both messages combined.
-- Never invent facts about the person beyond what was provided.
-
-Respond with ONLY valid JSON with no markdown fences, no preamble, exactly this shape:
-{"connection_note": "...", "dm_message": "..."}`;
-
-        const userMsg = `Name: ${name}
-Headline/bio: ${headline}
-Stack/skill: ${stack || 'not specified'}
-Specific hook: ${context || 'none given — keep the note generically warm rather than inventing one'}
-Already connected: ${connected ? 'yes, skip framing this as a first-touch stranger note in the DM' : 'no'}`;
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            system_instruction: {
-              parts: [{ text: system }]
-            },
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: userMsg }]
-              }
-            ],
-            generationConfig: {
-              response_mime_type: "application/json",
-              temperature: 0.7
-            }
-          })
-        });
-
-        if(!response.ok){
-          const errData = await response.json().catch(()=>({}));
-          throw new Error(errData.error?.message || `Gemini API returned status ${response.status}`);
-        }
-
-        const data = await response.json();
-        const candidate = data.candidates?.[0];
-        const raw = candidate?.content?.parts?.map(b => b.text || '').join('').trim() || '';
-        const clean = raw.replace(/^```json\s*|^```\s*|```$/g, '').trim();
-        parsed = JSON.parse(clean);
+      const parsed = await apiRes.json();
+      if(!apiRes.ok){
+        throw new Error(parsed.error || `Server error (${apiRes.status})`);
       }
 
-      lastResult = { name, headline, stack, context, connected, note: parsed.connection_note || '', dm: parsed.dm_message || '' };
-
-      // Auto-save to generation history permanently in localStorage
-      const historyItem = {
-        id: 'h_' + Date.now().toString(36) + Math.random().toString(16).slice(2, 6),
+      lastResult = {
         name,
         headline,
         stack,
         context,
+        linkedinUrl,
         connected,
-        note: lastResult.note,
-        dm: lastResult.dm,
-        savedToPipeline: false,
-        generatedAt: new Date().toISOString()
+        note: parsed.connection_note || '',
+        dm: parsed.dm_message || ''
       };
-      history.unshift(historyItem);
-      saveLocal(STORAGE_KEY_HISTORY, history);
-      saveDraftFormState();
+
+      // Auto-save to generation history in MongoDB
+      const histItem = {
+        id: 'h_' + Date.now().toString(36) + Math.random().toString(16).slice(2, 6),
+        ...lastResult,
+        savedToPipeline: false
+      };
+
+      fetch('/api/history', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(histItem)
+      }).then(r => r.json()).then(d => {
+        if(d.item) {
+          history.unshift(d.item);
+          renderHistory();
+        }
+      }).catch(()=>{});
 
       renderResult(lastResult);
-      renderHistory();
-      showToast('Draft generated & saved to history');
+      showToast('Authentic outreach draft generated');
     }catch(e){
-      showError(`Generation failed: ${e.message || 'Please check your Gemini API key and connection.'}`);
+      showError(`Generation failed: ${e.message}`);
     }finally{
       $('loading').classList.remove('active');
       $('btn-generate').disabled = false;
@@ -561,19 +718,13 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
     $('block-note').style.display = r.connected ? 'none' : 'block';
     $('note-text').textContent = r.note;
     const count = r.note.length;
-    $('note-count').textContent = count + ' / 280';
-    $('note-count').classList.toggle('over', count > 280);
+    $('note-count').textContent = count + ' / 250';
+    $('note-count').classList.toggle('over', count > 250);
     $('dm-text').textContent = r.dm;
     $('result').classList.add('active');
   }
 
-  function showError(msg){
-    const el = $('error');
-    el.textContent = msg;
-    el.classList.toggle('active', !!msg);
-  }
-
-  // copy buttons
+  // ---------- COPY BUTTONS ----------
   document.addEventListener('click', (e)=>{
     const btn = e.target.closest('[data-copy]');
     if(btn){
@@ -589,51 +740,62 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
     }
   });
 
-  function showToast(msg){
-    const t = $('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(()=>t.classList.remove('show'), 1800);
-  }
-
-  // ---------- save to pipeline ----------
+  // ---------- SAVE TO PIPELINE ----------
   $('btn-save').addEventListener('click', async ()=>{
     if(!lastResult) return;
-    const id = Date.now().toString(36) + Math.random().toString(16).slice(2,6);
-    leads.unshift({
-      id,
+    setSyncStatus('Saving to MongoDB...', true);
+
+    const leadId = Date.now().toString(36) + Math.random().toString(16).slice(2,6);
+    const newLead = {
+      id: leadId,
       name: lastResult.name,
       headline: lastResult.headline,
       stack: lastResult.stack,
       context: lastResult.context,
+      linkedinUrl: lastResult.linkedinUrl,
       note: lastResult.note,
       dm: lastResult.dm,
       status: 'Contacted',
-      notes: '',
-      addedAt: new Date().toISOString()
-    });
-    saveLocal(STORAGE_KEY_LEADS, leads);
+      notes: ''
+    };
 
-    // Mark matching history item as in pipeline
-    const match = history.find(h => h.name === lastResult.name && h.note === lastResult.note);
-    if(match){
-      match.savedToPipeline = true;
-      saveLocal(STORAGE_KEY_HISTORY, history);
-      renderHistory();
+    try{
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(newLead)
+      });
+
+      if(res.ok){
+        const data = await res.json();
+        leads.unshift(data.lead);
+        localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(leads));
+        setSyncStatus('MongoDB Synced', false);
+        showToast('Saved to team pipeline');
+
+        // Mark matching history items
+        const match = history.find(h => h.name === lastResult.name);
+        if(match) match.savedToPipeline = true;
+
+        renderPipeline();
+        renderHistory();
+
+        // Reset form
+        ['f-name','f-stack','f-headline','f-context','f-linkedin'].forEach(id=>{ if($(id)) $(id).value=''; });
+        if($('f-connected')) $('f-connected').checked = false;
+        $('result').classList.remove('active');
+        lastResult = null;
+      } else {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to save lead');
+      }
+    }catch(err){
+      setSyncStatus('Save failed', false);
+      showToast('Error saving: ' + err.message);
     }
-
-    renderPipeline();
-    showToast('Saved to pipeline');
-    
-    // reset form & saved draft
-    ['f-name','f-stack','f-headline','f-context'].forEach(id=>{ if($(id)) $(id).value=''; });
-    if($('f-connected')) $('f-connected').checked = false;
-    $('result').classList.remove('active');
-    lastResult = null;
-    saveDraftFormState();
   });
 
-  // ---------- pipeline render ----------
+  // ---------- PIPELINE RENDER ----------
   const filterSelect = $('filter-status');
   STATUSES.forEach(s=>{
     const opt = document.createElement('option');
@@ -641,6 +803,7 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
     filterSelect.appendChild(opt);
   });
   filterSelect.addEventListener('change', renderPipeline);
+  $('filter-user')?.addEventListener('change', renderPipeline);
   $('search').addEventListener('input', renderPipeline);
 
   function statusStyle(status){
@@ -653,7 +816,7 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
     const total = leads.length;
     const totalStat = document.createElement('div');
     totalStat.className = 'fxo-stat';
-    totalStat.innerHTML = `<b>${total}</b> total`;
+    totalStat.innerHTML = `<b>${total}</b> total leads`;
     box.appendChild(totalStat);
     STATUSES.forEach(s=>{
       const n = leads.filter(l=>l.status===s.v).length;
@@ -671,29 +834,43 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
     renderStats();
     const list = $('lead-list');
     const q = $('search').value.toLowerCase();
-    const filt = filterSelect.value;
+    const filtStatus = filterSelect.value;
+    const filtUser = $('filter-user')?.value || '';
+
     const visible = leads.filter(l=>{
-      const matchQ = !q || l.name.toLowerCase().includes(q) || (l.stack||'').toLowerCase().includes(q);
-      const matchF = !filt || l.status === filt;
-      return matchQ && matchF;
+      const matchQ = !q || l.name.toLowerCase().includes(q) || (l.stack||'').toLowerCase().includes(q) || (l.notes||'').toLowerCase().includes(q);
+      const matchStatus = !filtStatus || l.status === filtStatus;
+      let matchUser = true;
+      if(filtUser === 'me' && currentUser){
+        matchUser = l.createdBy === currentUser.username;
+      } else if(filtUser && filtUser !== 'me'){
+        matchUser = l.createdBy === filtUser;
+      }
+      return matchQ && matchStatus && matchUser;
     });
 
     if(visible.length === 0){
-      list.innerHTML = `<div class="fxo-empty"><p>${leads.length===0 ? 'No leads in pipeline yet — draft a message and save it to track here.' : 'Nothing matches that filter.'}</p></div>`;
+      list.innerHTML = `<div class="fxo-empty"><p>${leads.length===0 ? 'No leads in team pipeline yet — generate an authentic outreach note and save it here.' : 'Nothing matches that filter.'}</p></div>`;
       return;
     }
 
     list.innerHTML = visible.map(l=>{
       const st = statusStyle(l.status);
       const opts = STATUSES.map(s=>`<option value="${s.v}" ${s.v===l.status?'selected':''}>${s.v}</option>`).join('');
-      const date = new Date(l.addedAt);
+      const date = new Date(l.createdAt || l.addedAt || Date.now());
       const dateStr = date.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+      const author = l.createdBy ? `@${l.createdBy}` : 'team';
+      const updater = l.lastUpdatedBy ? `@${l.lastUpdatedBy}` : '';
+      const hasBeenUpdated = updater && updater !== author;
+
       return `
         <div class="fxo-lead" data-id="${l.id}">
           <div class="fxo-lead-top">
             <div>
-              <span class="fxo-lead-name">${escapeHtml(l.name)}</span><span class="fxo-lead-id">#${l.id.slice(-6)}</span>
-              <div class="fxo-lead-meta">${escapeHtml(l.headline).slice(0,90)}${l.headline.length>90?'…':''}</div>
+              <span class="fxo-lead-name">${escapeHtml(l.name)}</span>
+              <span class="fxo-lead-id">#${l.id.slice(-6)}</span>
+              ${l.linkedinUrl ? `<a href="${escapeHtml(l.linkedinUrl)}" target="_blank" rel="noopener" class="fxo-lead-link">LinkedIn ↗</a>` : ''}
+              <div class="fxo-lead-meta">${escapeHtml(l.headline).slice(0,100)}${l.headline.length>100?'…':''}</div>
             </div>
             <select class="fxo-status-select" data-action="status" style="background-color:${st.bg};color:${st.c};border-color:${st.c}44;">
               ${opts}
@@ -701,7 +878,8 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
           </div>
           <div class="fxo-lead-tags">
             ${l.stack ? `<span class="fxo-tag">${escapeHtml(l.stack)}</span>` : ''}
-            <span class="fxo-tag">added ${dateStr}</span>
+            <span class="fxo-tag fxo-tag-user">added by ${author} · ${dateStr}</span>
+            ${hasBeenUpdated ? `<span class="fxo-tag fxo-tag-updated">updated by ${updater}</span>` : ''}
           </div>
           <div class="fxo-lead-foot">
             <div class="fxo-lead-actions">
@@ -711,23 +889,27 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
           </div>
           <div class="fxo-lead-detail">
             ${l.note ? `<div class="fxo-msgblock"><div class="fxo-msghead"><span class="fxo-msglabel">CONNECTION NOTE</span><button class="fxo-btn fxo-btn-ghost fxo-btn-sm" data-copy-text="${escapeHtml(l.note)}">Copy</button></div><div class="fxo-msgtext">${escapeHtml(l.note)}</div></div>` : ''}
-            <div class="fxo-msgblock"><div class="fxo-msghead"><span class="fxo-msglabel">DM</span><button class="fxo-btn fxo-btn-ghost fxo-btn-sm" data-copy-text="${escapeHtml(l.dm)}">Copy</button></div><div class="fxo-msgtext">${escapeHtml(l.dm)}</div></div>
-            <label style="font-size:11px;color:var(--text-faint);font-family:var(--font-mono);">FOLLOW-UP NOTES</label>
-            <textarea data-action="notes" placeholder="e.g. replied 3/2, asked about payout timing...">${escapeHtml(l.notes||'')}</textarea>
+            <div class="fxo-msgblock"><div class="fxo-msghead"><span class="fxo-msglabel">DM MESSAGE</span><button class="fxo-btn fxo-btn-ghost fxo-btn-sm" data-copy-text="${escapeHtml(l.dm)}">Copy</button></div><div class="fxo-msgtext">${escapeHtml(l.dm)}</div></div>
+            <label style="font-size:11px;color:var(--text-faint);font-family:var(--font-mono);">FOLLOW-UP NOTES & LATEST UPDATES (auto-synced to DB)</label>
+            <textarea data-action="notes" placeholder="e.g. Replied, interested in verified skills profile...">${escapeHtml(l.notes||'')}</textarea>
           </div>
         </div>`;
     }).join('');
   }
 
-  // ---------- history render & actions ----------
+  // ---------- HISTORY RENDER ----------
   $('search-history')?.addEventListener('input', renderHistory);
-  $('btn-clear-history')?.addEventListener('click', ()=>{
+  $('btn-clear-history')?.addEventListener('click', async ()=>{
     if(history.length === 0) return;
-    if(confirm('Are you sure you want to clear all generation history? Saved pipeline leads will remain intact.')){
-      history = [];
-      saveLocal(STORAGE_KEY_HISTORY, history);
-      renderHistory();
-      showToast('Generation history cleared');
+    if(confirm('Clear all draft history? Leads in team pipeline will remain safe.')){
+      try{
+        await fetch('/api/history?clearAll=true', { method: 'DELETE', headers: getAuthHeaders() });
+        history = [];
+        renderHistory();
+        showToast('History cleared');
+      }catch(e){
+        showToast('Failed to clear history');
+      }
     }
   });
 
@@ -739,7 +921,7 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
     if(statBox){
       statBox.innerHTML = `
         <div class="fxo-stat"><b>${history.length}</b> generated</div>
-        <div class="fxo-stat" style="color:var(--accent);"><b style="color:var(--accent);">${history.filter(h=>h.savedToPipeline || leads.some(l=>l.name===h.name && l.note===h.note)).length}</b> in pipeline</div>
+        <div class="fxo-stat" style="color:var(--accent);"><b style="color:var(--accent);">${history.filter(h=>h.savedToPipeline || leads.some(l=>l.name===h.name)).length}</b> in pipeline</div>
       `;
     }
 
@@ -758,27 +940,30 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
     });
 
     if(visible.length === 0){
-      list.innerHTML = `<div class="fxo-empty"><p>${history.length === 0 ? 'No generation history yet — every draft generated with Gemini is automatically saved here permanently.' : 'Nothing matches that search in history.'}</p></div>`;
+      list.innerHTML = `<div class="fxo-empty"><p>${history.length === 0 ? 'No generation history yet.' : 'Nothing matches that search in history.'}</p></div>`;
       return;
     }
 
     list.innerHTML = visible.map(h => {
-      const date = new Date(h.generatedAt);
+      const date = new Date(h.generatedAt || Date.now());
       const dateStr = date.toLocaleDateString(undefined, {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
-      const isSaved = h.savedToPipeline || leads.some(l => l.name === h.name && l.note === h.note);
+      const isSaved = h.savedToPipeline || leads.some(l => l.name === h.name);
+      const author = h.generatedBy ? `@${h.generatedBy}` : 'team';
+
       return `
         <div class="fxo-lead" data-hid="${h.id}">
           <div class="fxo-lead-top">
             <div>
               <span class="fxo-lead-name">${escapeHtml(h.name)}</span>
               <span class="fxo-badge ${isSaved ? 'fxo-badge-saved' : 'fxo-badge-unsaved'}">${isSaved ? '● In Pipeline' : '○ Drafted'}</span>
+              ${h.linkedinUrl ? `<a href="${escapeHtml(h.linkedinUrl)}" target="_blank" rel="noopener" class="fxo-lead-link">LinkedIn ↗</a>` : ''}
               <div class="fxo-lead-meta">${escapeHtml(h.headline).slice(0,90)}${h.headline.length>90?'…':''}</div>
             </div>
             <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-faint);">${dateStr}</span>
           </div>
           <div class="fxo-lead-tags">
             ${h.stack ? `<span class="fxo-tag">${escapeHtml(h.stack)}</span>` : ''}
-            ${h.context ? `<span class="fxo-tag" title="${escapeHtml(h.context)}">hook: ${escapeHtml(h.context).slice(0,35)}${h.context.length>35?'…':''}</span>` : ''}
+            <span class="fxo-tag fxo-tag-user">generated by ${author}</span>
           </div>
           <div class="fxo-lead-foot">
             <div class="fxo-lead-actions">
@@ -788,7 +973,7 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
             <button class="fxo-link-btn" data-action="delete-hist">delete</button>
           </div>
           <div class="fxo-lead-detail">
-            ${h.note ? `<div class="fxo-msgblock"><div class="fxo-msghead"><span class="fxo-msglabel">CONNECTION NOTE (${h.note.length}/280)</span><button class="fxo-btn fxo-btn-ghost fxo-btn-sm" data-copy-text="${escapeHtml(h.note)}">Copy</button></div><div class="fxo-msgtext">${escapeHtml(h.note)}</div></div>` : ''}
+            ${h.note ? `<div class="fxo-msgblock"><div class="fxo-msghead"><span class="fxo-msglabel">CONNECTION NOTE (${h.note.length}/250)</span><button class="fxo-btn fxo-btn-ghost fxo-btn-sm" data-copy-text="${escapeHtml(h.note)}">Copy</button></div><div class="fxo-msgtext">${escapeHtml(h.note)}</div></div>` : ''}
             <div class="fxo-msgblock"><div class="fxo-msghead"><span class="fxo-msglabel">DM / FOLLOW-UP</span><button class="fxo-btn fxo-btn-ghost fxo-btn-sm" data-copy-text="${escapeHtml(h.dm)}">Copy</button></div><div class="fxo-msgtext">${escapeHtml(h.dm)}</div></div>
           </div>
         </div>`;
@@ -801,7 +986,7 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
     return d.innerHTML;
   }
 
-  // ---------- interaction delegation ----------
+  // ---------- INTERACTION DELEGATION ----------
   document.addEventListener('click', async (e)=>{
     // Pipeline lead actions
     const leadEl = e.target.closest('.fxo-lead[data-id]');
@@ -813,16 +998,26 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
         leadEl.querySelector('.fxo-lead-detail').classList.toggle('active');
       }
       if(action === 'delete'){
-        leads = leads.filter(l=>l.id !== id);
-        saveLocal(STORAGE_KEY_LEADS, leads);
-        renderPipeline();
-        renderHistory();
-        showToast('Lead removed from pipeline');
+        if(confirm('Remove this lead from team pipeline?')){
+          try{
+            await fetch('/api/leads', {
+              method: 'DELETE',
+              headers: getAuthHeaders(),
+              body: JSON.stringify({ id })
+            });
+            leads = leads.filter(l=>l.id !== id);
+            renderPipeline();
+            renderHistory();
+            showToast('Lead removed');
+          }catch(err){
+            showToast('Failed to delete lead');
+          }
+        }
       }
       return;
     }
 
-    // History lead actions
+    // History actions
     const histEl = e.target.closest('.fxo-lead[data-hid]');
     if(histEl){
       const hid = histEl.dataset.hid;
@@ -832,91 +1027,137 @@ Already connected: ${connected ? 'yes, skip framing this as a first-touch strang
         histEl.querySelector('.fxo-lead-detail').classList.toggle('active');
       }
       if(action === 'delete-hist'){
-        history = history.filter(h => h.id !== hid);
-        saveLocal(STORAGE_KEY_HISTORY, history);
-        renderHistory();
-        showToast('History item deleted');
+        try{
+          await fetch('/api/history', {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ id: hid })
+          });
+          history = history.filter(h => h.id !== hid);
+          renderHistory();
+          showToast('History item removed');
+        }catch(e){}
       }
       if(action === 'hist-to-pipeline'){
         const item = history.find(h => h.id === hid);
         if(item){
-          const id = Date.now().toString(36) + Math.random().toString(16).slice(2,6);
-          leads.unshift({
-            id,
+          const leadId = Date.now().toString(36) + Math.random().toString(16).slice(2,6);
+          const newLead = {
+            id: leadId,
             name: item.name,
             headline: item.headline,
             stack: item.stack,
             context: item.context,
+            linkedinUrl: item.linkedinUrl,
             note: item.note,
             dm: item.dm,
             status: 'Contacted',
-            notes: '',
-            addedAt: new Date().toISOString()
+            notes: ''
+          };
+
+          const res = await fetch('/api/leads', {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(newLead)
           });
-          item.savedToPipeline = true;
-          saveLocal(STORAGE_KEY_LEADS, leads);
-          saveLocal(STORAGE_KEY_HISTORY, history);
-          renderPipeline();
-          renderHistory();
-          showToast('Added to pipeline');
+          if(res.ok){
+            const d = await res.json();
+            leads.unshift(d.lead);
+            item.savedToPipeline = true;
+            renderPipeline();
+            renderHistory();
+            showToast('Added to team pipeline');
+          }
         }
       }
       return;
     }
   });
 
+  // Changing status in pipeline
   document.addEventListener('change', async (e)=>{
     if(e.target.dataset.action === 'status'){
       const leadEl = e.target.closest('.fxo-lead[data-id]');
       if(!leadEl) return;
       const id = leadEl.dataset.id;
-      const lead = leads.find(l=>l.id===id);
-      if(lead){
-        lead.status = e.target.value;
-        saveLocal(STORAGE_KEY_LEADS, leads);
-        renderPipeline();
+      const newStatus = e.target.value;
+
+      setSyncStatus('Updating MongoDB...', true);
+      try{
+        const res = await fetch('/api/leads', {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ id, status: newStatus })
+        });
+
+        if(res.ok){
+          const data = await res.json();
+          const idx = leads.findIndex(l=>l.id === id);
+          if(idx !== -1) leads[idx] = data.lead;
+          setSyncStatus('MongoDB Synced', false);
+          renderPipeline();
+          showToast(`Status updated to ${newStatus}`);
+        }
+      }catch(err){
+        setSyncStatus('Update failed', false);
       }
     }
   });
 
-  document.addEventListener('blur', async (e)=>{
+  // Updating notes
+  let noteDebounce = null;
+  document.addEventListener('input', (e)=>{
     if(e.target.dataset && e.target.dataset.action === 'notes'){
       const leadEl = e.target.closest('.fxo-lead[data-id]');
       if(!leadEl) return;
       const id = leadEl.dataset.id;
-      const lead = leads.find(l=>l.id===id);
-      if(lead){
-        lead.notes = e.target.value;
-        saveLocal(STORAGE_KEY_LEADS, leads);
-      }
+      const notes = e.target.value;
+
+      clearTimeout(noteDebounce);
+      setSyncStatus('Saving notes...', true);
+      noteDebounce = setTimeout(async ()=>{
+        try{
+          const res = await fetch('/api/leads', {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ id, notes })
+          });
+          if(res.ok){
+            const data = await res.json();
+            const idx = leads.findIndex(l=>l.id === id);
+            if(idx !== -1) leads[idx] = data.lead;
+            setSyncStatus('MongoDB Synced', false);
+          }
+        }catch(err){
+          setSyncStatus('Sync error', false);
+        }
+      }, 800);
     }
-  }, true);
+  });
 
-  // ---------- api key settings ----------
-  const keyInput = $('f-apikey');
-  const savedKey = getApiKey();
-  if(savedKey && keyInput){
-    keyInput.value = savedKey;
-  }
-
+  // API Key Toggle
   $('btn-key-toggle')?.addEventListener('click', ()=>{
     const box = $('key-config');
     box.style.display = box.style.display === 'none' ? 'block' : 'none';
   });
 
   $('btn-save-key')?.addEventListener('click', ()=>{
-    const key = keyInput.value.trim();
+    const key = $('f-apikey').value.trim();
     if(key){
       localStorage.setItem(API_KEY_STORAGE, key);
-      showToast('Gemini API key saved');
+      showToast('API key saved');
       $('key-config').style.display = 'none';
-      showError('');
     }else{
       localStorage.removeItem(API_KEY_STORAGE);
-      showToast('Gemini API key cleared');
+      showToast('API key cleared');
     }
   });
 
-  loadAllData();
+  // Initial Boot
+  checkAuthSession().then(authed => {
+    if(authed) loadAllDataFromDB();
+  });
 })();
 </script>
+</body>
+</html>
