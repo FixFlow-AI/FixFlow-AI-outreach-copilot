@@ -92,44 +92,97 @@ Return a strictly valid JSON object:
 
 Generate an authentic, concise connection note (if not connected) and direct message now. Return ONLY JSON.`;
 
-    const MODEL = 'gemini-3.5-flash-lite';
-
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: `${system}\n\n${prompt}` }]
-            }
-          ],
-          generationConfig: {
-            response_mime_type: 'application/json',
-            temperature: 0.65
-          }
-        })
-      }
-    );
-
-    if (!geminiRes.ok) {
-      const errData = await geminiRes.json().catch(() => ({}));
-      const errorMsg = errData.error?.message || `Gemini API returned status ${geminiRes.status}`;
-      return res.status(geminiRes.status).json({ error: errorMsg });
-    }
-
-    const data = await geminiRes.json();
-    const candidate = data.candidates?.[0];
-    const raw = candidate?.content?.parts?.map(b => b.text || '').join('').trim() || '';
-    const clean = raw.replace(/^```json\s*|^```\s*|```$/g, '').trim();
+    // Primary model is gemini-3.5-flash-lite, with high-availability fallbacks for temporary Google traffic spikes
+    const MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.5-flash'];
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     let parsed = null;
-    try {
-      parsed = JSON.parse(clean);
-    } catch (parseErr) {
-      return res.status(500).json({ error: 'Failed to parse JSON response from Gemini 3.5 Flash Lite' });
+    let lastErrorMsg = null;
+
+    for (const model of MODELS) {
+      const maxRetries = (model === 'gemini-3.5-flash-lite') ? 2 : 1;
+
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 14000); // 14s timeout per attempt
+
+          const geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: 'user',
+                    parts: [{ text: `${system}\n\n${prompt}` }]
+                  }
+                ],
+                generationConfig: {
+                  response_mime_type: 'application/json',
+                  temperature: 0.65
+                }
+              })
+            }
+          );
+          clearTimeout(timeoutId);
+
+          if (!geminiRes.ok) {
+            const errData = await geminiRes.json().catch(() => ({}));
+            const errorMsg = errData.error?.message || `Gemini API returned status ${geminiRes.status}`;
+            lastErrorMsg = errorMsg;
+
+            const isTransient =
+              geminiRes.status === 503 ||
+              geminiRes.status === 429 ||
+              /demand|unavailable|overloaded|busy|temporary|quota|resource_exhausted/i.test(errorMsg);
+
+            if (isTransient && attempt < maxRetries) {
+              console.warn(`[Gemini API ${model}] Transient capacity spike (attempt ${attempt}): ${errorMsg}. Retrying in 1200ms...`);
+              await sleep(1200 * attempt);
+              continue;
+            }
+
+            console.warn(`[Gemini API ${model}] Attempt ${attempt} failed: ${errorMsg}. Moving to next candidate.`);
+            break; // Try next model in fallback list
+          }
+
+          const data = await geminiRes.json();
+          const candidate = data.candidates?.[0];
+          const raw = candidate?.content?.parts?.map(b => b.text || '').join('').trim() || '';
+          const clean = raw.replace(/^```json\s*|^```\s*|```$/g, '').trim();
+
+          try {
+            parsed = JSON.parse(clean);
+            break; // Success! Exit retry loop
+          } catch (parseErr) {
+            lastErrorMsg = `Failed to parse JSON response from ${model}`;
+            break;
+          }
+        } catch (fetchErr) {
+          lastErrorMsg = fetchErr.name === 'AbortError'
+            ? `Request timed out on ${model}`
+            : fetchErr.message;
+          console.warn(`[Gemini API ${model}] Error on attempt ${attempt}: ${lastErrorMsg}`);
+          if (attempt < maxRetries) {
+            await sleep(1000 * attempt);
+            continue;
+          }
+          break;
+        }
+      }
+
+      if (parsed) {
+        break; // Successfully generated, exit model loop
+      }
+    }
+
+    if (!parsed) {
+      return res.status(503).json({
+        error: lastErrorMsg || 'Google AI models are currently experiencing high demand. Please try again in a few moments.'
+      });
     }
 
     return res.status(200).json(parsed);
