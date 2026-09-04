@@ -76,60 +76,44 @@ Return a strictly valid JSON object:
 
 Generate an authentic, concise connection note (if not connected) and direct message now. Return ONLY JSON.`;
 
-    const candidateModels = [
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash'
-    ];
+    const MODEL = 'gemini-3.5-flash-lite';
 
-    let lastError = null;
-    let parsed = null;
-
-    for (const model of candidateModels) {
-      try {
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                {
-                  role: 'user',
-                  parts: [{ text: `${system}\n\n${prompt}` }]
-                }
-              ],
-              generationConfig: {
-                response_mime_type: 'application/json',
-                temperature: 0.65
-              }
-            })
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: `${system}\n\n${prompt}` }]
+            }
+          ],
+          generationConfig: {
+            response_mime_type: 'application/json',
+            temperature: 0.65
           }
-        );
-
-        if (geminiRes.ok) {
-          const data = await geminiRes.json();
-          const candidate = data.candidates?.[0];
-          const raw = candidate?.content?.parts?.map(b => b.text || '').join('').trim() || '';
-          const clean = raw.replace(/^```json\s*|^```\s*|```$/g, '').trim();
-          parsed = JSON.parse(clean);
-          break; // Success!
-        } else {
-          const errData = await geminiRes.json().catch(() => ({}));
-          lastError = errData.error?.message || `Gemini API returned status ${geminiRes.status}`;
-          if (geminiRes.status === 503 || geminiRes.status === 404) {
-            continue;
-          } else {
-            return res.status(geminiRes.status).json({ error: lastError });
-          }
-        }
-      } catch (err) {
-        lastError = err.message;
+        })
       }
+    );
+
+    if (!geminiRes.ok) {
+      const errData = await geminiRes.json().catch(() => ({}));
+      const errorMsg = errData.error?.message || `Gemini API returned status ${geminiRes.status}`;
+      return res.status(geminiRes.status).json({ error: errorMsg });
     }
 
-    if (!parsed) {
-      return res.status(500).json({ error: lastError || 'Error occurred during generation across candidate models' });
+    const data = await geminiRes.json();
+    const candidate = data.candidates?.[0];
+    const raw = candidate?.content?.parts?.map(b => b.text || '').join('').trim() || '';
+    const clean = raw.replace(/^```json\s*|^```\s*|```$/g, '').trim();
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(clean);
+    } catch (parseErr) {
+      return res.status(500).json({ error: 'Failed to parse JSON response from Gemini 3.5 Flash Lite' });
     }
 
     return res.status(200).json(parsed);
