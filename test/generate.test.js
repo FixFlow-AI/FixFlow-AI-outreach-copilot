@@ -109,7 +109,7 @@ async function runGenerateTest() {
           if (typeof url === 'string' && url.includes('generativelanguage.googleapis.com')) {
             const simulatedOutput = JSON.stringify({
               connection_note: "Hi Vikram, read your post on milestone disputes—great insights on freelancing payment friction. Always great to connect with fellow Rust engineers.",
-              dm_message: "Hi Vikram,\n\nThanks for connecting. Your take on milestone disputes really resonated—getting ghosted or delayed on milestone payouts is one of the most frustrating parts of freelance engineering.\n\nWe built FixFlow AI to eliminate that exact headache with escrow-protected milestone payments and GitHub-verified repo profiles, so clients pay on milestone completion with zero disputes.\n\nIf you'd like to check it out and claim your verified profile, feel free to visit fixflowai.xyz. No pressure at all—hope the week goes well!\n\nBest,\nSuvam"
+              dm_message: "Hi Vikram,\n\nThanks for connecting. Your take on milestone disputes really resonated—getting ghosted or delayed on milestone payouts is one of the most frustrating parts of freelance engineering.\n\nWe built FixFlow AI to eliminate that exact headache with escrow-protected milestone payments and GitHub-verified repo profiles, so clients pay on milestone completion with zero disputes.\n\nIf you'd like to check it out and claim your verified skills profile, you can get started here:\nfixflowai.xyz -> Request Access -> Choose role as Freelancer -> Login only with GitHub -> Analyse my GitHub\n\nWould love to hear your thoughts on this as a fellow builder.\n\nBest,\nSuvam"
             });
             return {
               ok: true,
@@ -151,8 +151,12 @@ async function runGenerateTest() {
         assert(!lower.includes('revolutionary'));
         assert(!lower.includes('supercharge'));
         assert(data.dm_message.includes('fixflowai.xyz'));
+        assert(data.dm_message.includes('Request Access'));
+        assert(data.dm_message.includes('Freelancer'));
+        assert(data.dm_message.includes('GitHub'));
+        assert(data.dm_message.includes('Analyse my GitHub'));
 
-        console.log('✓ AI generation validated: concise connection note (<250 chars) and humanized dev-to-dev DM');
+        console.log('✓ AI generation validated: concise connection note (<250 chars), humanized dev-to-dev DM, and exact registration flow');
       } finally {
         globalThis.fetch = originalFetch;
       }

@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Name and headline are required.' });
     }
 
-    const system = `You write genuine, concise, peer-to-peer LinkedIn outreach messages for FixFlow AI (fixflowai.xyz).
+    const system = `You write genuine, peer-to-peer LinkedIn outreach messages for FixFlow AI (fixflowai.xyz).
 
 Core Philosophy:
 - Write like a fellow engineer or founder messaging an engineer directly.
@@ -59,11 +59,25 @@ Developer Pain Points & FixFlow AI Solution:
 2. Pain Point: Milestone payment anxiety—clients delaying milestone payouts, scope creep, or ghosting after delivery.
    FixFlow Solution: Escrow-protected milestone payouts, guaranteeing payment upon milestone completion.
 
+Mandatory Registration Process & Link in EVERY DM:
+Every direct message MUST include the exact registration process and link (fixflowai.xyz) so the prospect has crystal-clear instructions to onboard:
+Link: fixflowai.xyz
+Registration steps: Request Access -> Choose role as Freelancer -> Login only with GitHub -> Analyse my GitHub
+
+DM Message Structure:
+Format every dm_message into clean, scannable paragraphs separated by double line breaks (\\n\\n):
+- Paragraph 1 (Personal Hook): Direct, friendly greeting referencing their specific tech stack or recent work.
+- Paragraph 2 (Pain Point & Solution): Briefly articulate how resumes hide real code depth in freelance bidding and the headache of milestone payment delays, followed by how FixFlow solves this via GitHub-verified repo profiles and escrow-protected milestone payouts.
+- Paragraph 3 (Registration Process & Link): Present the link and registration process clearly and naturally:
+  "If you'd like to check it out and claim your verified skills profile, you can get started here:
+  fixflowai.xyz -> Request Access -> Choose role as Freelancer -> Login only with GitHub -> Analyse my GitHub"
+- Paragraph 4 (Low-Pressure Close): Polite, humble sign-off or open feedback question from one builder to another.
+
 Output Requirements:
 Return a strictly valid JSON object:
 {
   "connection_note": "A concise, natural note under 250 characters. Brief pain point mention, simple solution question. No pitches, no buzzwords. If 'connected' is true, return empty string.",
-  "dm_message": "A concise, humble direct message under 600 characters. 3-4 sentences max. Highlight how GitHub repo verification beats resume clutter, mention escrow milestone safety, and ask an open feedback question."
+  "dm_message": "A well-structured direct message following the 4-part structure above, including the exact registration steps and fixflowai.xyz link."
 }`;
 
     const prompt = `Prospect Profile:
