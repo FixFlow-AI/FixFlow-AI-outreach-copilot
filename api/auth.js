@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { getDb } from './lib/db.js';
+import { getDb, DEFAULT_USERS } from './lib/db.js';
 import { signToken, authMiddleware } from './lib/auth.js';
 
 export default async function handler(req, res) {
@@ -16,22 +16,23 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const db = await getDb();
-  const usersCol = db.collection('users');
-
-  // GET /api/auth -> Verify current token session
+  // GET /api/auth -> Verify current token session (Cryptographic verification)
   if (req.method === 'GET') {
-    const user = authMiddleware(req, res);
-    if (!user) return; // 401 response already handled
+    try {
+      const user = authMiddleware(req, res);
+      if (!user) return; // 401 response already handled
 
-    return res.status(200).json({
-      authenticated: true,
-      user: {
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role
-      }
-    });
+      return res.status(200).json({
+        authenticated: true,
+        user: {
+          username: user.username,
+          displayName: user.displayName,
+          role: user.role
+        }
+      });
+    } catch (err) {
+      return res.status(500).json({ error: err.message || 'Failed to verify session' });
+    }
   }
 
   // POST /api/auth -> Login
@@ -43,34 +44,68 @@ export default async function handler(req, res) {
     }
 
     const cleanUsername = String(username).trim().toLowerCase();
-    const user = await usersCol.findOne({ username: cleanUsername });
+    const cleanPassword = String(password).trim();
 
-    if (!user || !user.passwordHash) {
-      return res.status(401).json({ error: 'Invalid username or password. Access restricted to authorized team.' });
-    }
+    // 1. Attempt MongoDB database authentication first
+    let dbErrorMsg = '';
 
-    const isMatch = await bcrypt.compare(String(password).trim(), user.passwordHash);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid username or password. Access restricted to authorized team.' });
-    }
+    try {
+      const db = await getDb();
+      const usersCol = db.collection('users');
+      const user = await usersCol.findOne({ username: cleanUsername });
 
-    // Update lastLogin
-    await usersCol.updateOne(
-      { _id: user._id },
-      { $set: { lastLogin: new Date() } }
-    );
+      if (user && user.passwordHash) {
+        const isMatch = await bcrypt.compare(cleanPassword, user.passwordHash);
+        if (!isMatch) {
+          return res.status(401).json({ error: 'Invalid username or password. Access restricted to authorized team.' });
+        }
 
-    const token = signToken(user);
+        // Update lastLogin in background
+        usersCol.updateOne(
+          { _id: user._id },
+          { $set: { lastLogin: new Date() } }
+        ).catch(() => {});
 
-    return res.status(200).json({
-      message: 'Login successful',
-      token,
-      user: {
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role
+        const token = signToken(user);
+        return res.status(200).json({
+          message: 'Login successful',
+          token,
+          user: {
+            username: user.username,
+            displayName: user.displayName,
+            role: user.role
+          }
+        });
+      } else if (user === null) {
+        // User searched in DB and explicitly not found
+        return res.status(401).json({ error: 'Invalid username or password. Access restricted to authorized team.' });
       }
-    });
+    } catch (err) {
+      console.warn('[Auth] MongoDB connection unavailable during login:', err.message);
+      dbErrorMsg = err.message;
+    }
+
+    // 2. If MongoDB connection failed (e.g. Atlas IP whitelist pending), authenticate authorized team members directly
+    const defaultUser = DEFAULT_USERS.find(u => u.username.toLowerCase() === cleanUsername);
+    if (defaultUser) {
+      if (defaultUser.password !== cleanPassword) {
+        return res.status(401).json({ error: 'Invalid username or password. Access restricted to authorized team.' });
+      }
+
+      const token = signToken(defaultUser);
+      return res.status(200).json({
+        message: 'Login successful',
+        token,
+        user: {
+          username: defaultUser.username,
+          displayName: defaultUser.displayName,
+          role: defaultUser.role
+        },
+        warning: dbErrorMsg || 'MongoDB is currently offline. Running in local sync mode.'
+      });
+    }
+
+    return res.status(401).json({ error: 'Invalid username or password. Access restricted to authorized team.' });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

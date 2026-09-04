@@ -449,6 +449,21 @@
     el.classList.toggle('active', !!msg);
   }
 
+  // Safely parse JSON from responses, gracefully handling plain-text/HTML cloud error pages
+  async function safeFetchJson(res) {
+    try {
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        const clean = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        return { error: clean || `Server returned status ${res.status}` };
+      }
+    } catch (netErr) {
+      return { error: netErr.message || 'Network request failed' };
+    }
+  }
+
   // ---------- AUTHENTICATION ----------
   async function checkAuthSession(){
     const token = getToken();
@@ -463,7 +478,7 @@
       });
 
       if(res.ok){
-        const data = await res.json();
+        const data = await safeFetchJson(res);
         currentUser = data.user;
         updateUserUI();
         showLoginModal(false);
@@ -515,7 +530,7 @@
         body: JSON.stringify({ username, password })
       });
 
-      const data = await res.json();
+      const data = await safeFetchJson(res);
       if(!res.ok){
         throw new Error(data.error || 'Authentication failed');
       }
@@ -553,7 +568,7 @@
     try{
       const res = await fetch('/api/leads', { headers: getAuthHeaders() });
       if(res.ok){
-        const data = await res.json();
+        const data = await safeFetchJson(res);
         leads = data.leads || [];
         localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(leads));
       } else if(res.status === 401){
@@ -568,7 +583,7 @@
     try{
       const res = await fetch('/api/history', { headers: getAuthHeaders() });
       if(res.ok){
-        const data = await res.json();
+        const data = await safeFetchJson(res);
         history = data.history || [];
         localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
       }
@@ -627,7 +642,7 @@
         headers: getAuthHeaders()
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await safeFetchJson(res);
         if (data.exists && data.lead) {
           currentDuplicateLead = data.lead;
           showDuplicateAlert(data.lead);
@@ -722,7 +737,7 @@
         throw new Error('Session expired. Please sign in again.');
       }
 
-      const parsed = await apiRes.json();
+      const parsed = await safeFetchJson(apiRes);
       if(!apiRes.ok){
         throw new Error(parsed.error || `Server error (${apiRes.status})`);
       }
@@ -749,7 +764,7 @@
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(histItem)
-      }).then(r => r.json()).then(d => {
+      }).then(r => safeFetchJson(r)).then(d => {
         if(d.item) {
           history.unshift(d.item);
           renderHistory();
@@ -825,16 +840,16 @@
         body: JSON.stringify(newLead)
       });
 
+      const data = await safeFetchJson(res);
+
       if(res.status === 409){
-        const conflict = await res.json();
         setSyncStatus('Duplicate blocked', false);
-        showError(conflict.error || 'Duplicate lead: this prospect is already in the pipeline.');
+        showError(data.error || 'Duplicate lead: this prospect is already in the pipeline.');
         showToast('Duplicate prospect blocked');
         return;
       }
 
       if(res.ok){
-        const data = await res.json();
         leads.unshift(data.lead);
         localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(leads));
         setSyncStatus('MongoDB Synced', false);
@@ -856,8 +871,7 @@
         currentDuplicateLead = null;
         lastResult = null;
       } else {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to save lead');
+        throw new Error(data.error || 'Failed to save lead');
       }
     }catch(err){
       setSyncStatus('Save failed', false);
@@ -1131,12 +1145,14 @@
             body: JSON.stringify(newLead)
           });
           if(res.ok){
-            const d = await res.json();
-            leads.unshift(d.lead);
-            item.savedToPipeline = true;
-            renderPipeline();
-            renderHistory();
-            showToast('Added to team pipeline');
+            const d = await safeFetchJson(res);
+            if (d.lead) {
+              leads.unshift(d.lead);
+              item.savedToPipeline = true;
+              renderPipeline();
+              renderHistory();
+              showToast('Added to team pipeline');
+            }
           }
         }
       }
@@ -1161,9 +1177,9 @@
         });
 
         if(res.ok){
-          const data = await res.json();
+          const data = await safeFetchJson(res);
           const idx = leads.findIndex(l=>l.id === id);
-          if(idx !== -1) leads[idx] = data.lead;
+          if(idx !== -1 && data.lead) leads[idx] = data.lead;
           setSyncStatus('MongoDB Synced', false);
           renderPipeline();
           showToast(`Status updated to ${newStatus}`);
@@ -1193,9 +1209,9 @@
             body: JSON.stringify({ id, notes })
           });
           if(res.ok){
-            const data = await res.json();
+            const data = await safeFetchJson(res);
             const idx = leads.findIndex(l=>l.id === id);
-            if(idx !== -1) leads[idx] = data.lead;
+            if(idx !== -1 && data.lead) leads[idx] = data.lead;
             setSyncStatus('MongoDB Synced', false);
           }
         }catch(err){

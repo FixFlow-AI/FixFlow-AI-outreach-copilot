@@ -14,6 +14,9 @@ const DB_NAME = 'fixflow_outreach';
 
 let cachedClient = null;
 let cachedDb = null;
+let lastFailedTime = 0;
+let lastFailedError = null;
+const RETRY_COOLDOWN_MS = 15000;
 
 // Initial authorized team credentials to seed into MongoDB
 export const DEFAULT_USERS = [
@@ -27,23 +30,60 @@ export async function getDb() {
     return cachedDb;
   }
 
-  const connectionUri = process.env.DB_CONNECTION_URL || uri;
+  const connectionUri = (process.env.DB_CONNECTION_URL || uri || '').trim();
   if (!connectionUri) {
-    throw new Error('DB_CONNECTION_URL is not defined in environment variables');
+    throw new Error('DB_CONNECTION_URL is not configured. Please set DB_CONNECTION_URL in your Vercel Project Settings (Settings -> Environment Variables).');
+  }
+
+  if (Date.now() - lastFailedTime < RETRY_COOLDOWN_MS && lastFailedError) {
+    throw lastFailedError;
   }
 
   if (!cachedClient) {
-    cachedClient = new MongoClient(connectionUri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 8000,
-    });
-    await cachedClient.connect();
+    try {
+      const client = new MongoClient(connectionUri, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 4000,
+        connectTimeoutMS: 4000
+      });
+      await client.connect();
+      cachedClient = client;
+      lastFailedTime = 0;
+      lastFailedError = null;
+    } catch (connErr) {
+      cachedClient = null;
+      cachedDb = null;
+      const msg = connErr.message || '';
+      console.error('[DB] Connection failure:', msg);
+
+      let formattedErr;
+      if (msg.includes('SSL alert number 80') || msg.includes('tlsv1 alert internal error') || msg.includes('ServerSelectionError') || msg.includes('ReplicaSetNoPrimary')) {
+        formattedErr = new Error(
+          'MongoDB Atlas connection rejected (SSL alert 80 / IP not whitelisted). ' +
+          'Vercel dynamic IPs are blocked by default. Please go to MongoDB Atlas -> Network Access -> Add IP Address -> Select "Allow Access from Anywhere" (0.0.0.0/0).'
+        );
+      } else if (msg.includes('bad auth') || msg.includes('Authentication failed')) {
+        formattedErr = new Error(
+          'MongoDB Atlas authentication failed. Please verify database username and password in DB_CONNECTION_URL.'
+        );
+      } else {
+        formattedErr = new Error(`MongoDB connection error: ${msg}`);
+      }
+
+      lastFailedTime = Date.now();
+      lastFailedError = formattedErr;
+      throw formattedErr;
+    }
   }
 
   cachedDb = cachedClient.db(DB_NAME);
 
   // Initialize collections & seed users if not present
-  await initDatabase(cachedDb);
+  try {
+    await initDatabase(cachedDb);
+  } catch (initErr) {
+    console.error('[DB] initDatabase warning:', initErr.message);
+  }
 
   return cachedDb;
 }
