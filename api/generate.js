@@ -31,11 +31,19 @@ export default async function handler(req, res) {
     const user = authMiddleware(req, res);
     if (!user) return; // 401 handled
 
-    // Read Gemini API key from request body or environment variables
-    const apiKey = (req.body?.apiKey || process.env.GEMINI_API_KEY || '').trim();
-    if (!apiKey) {
+    // Read API keys from request body or environment variables
+    let geminiApiKey = (req.body?.apiKey || process.env.GEMINI_API_KEY || '').trim();
+    let groqApiKey = (req.body?.groqApiKey || process.env.GROQ_API_KEY || process.env.groq_api || '').trim();
+
+    // Auto-detect Groq key if user passed a gsk_ key in apiKey
+    if (geminiApiKey.startsWith('gsk_')) {
+      groqApiKey = geminiApiKey;
+      geminiApiKey = (process.env.GEMINI_API_KEY || '').trim();
+    }
+
+    if (!geminiApiKey && !groqApiKey) {
       return res.status(400).json({
-        error: 'GEMINI_API_KEY is not configured. Please add GEMINI_API_KEY to your .env file or enter your API key in the settings.'
+        error: 'No AI API key configured. Please set GEMINI_API_KEY or GROQ_API_KEY in your .env file or enter your API key in settings.'
       });
     }
 
@@ -92,96 +100,155 @@ Return a strictly valid JSON object:
 
 Generate an authentic, concise connection note (if not connected) and direct message now. Return ONLY JSON.`;
 
-    // Primary model is gemini-3.5-flash-lite, with high-availability fallbacks for temporary Google traffic spikes
-    const MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.5-flash'];
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
     let parsed = null;
     let lastErrorMsg = null;
 
-    for (const model of MODELS) {
-      const maxRetries = (model === 'gemini-3.5-flash-lite') ? 2 : 1;
+    // 1. PRIMARY TIER: Google Gemini (Primary: Gemini 3.1 Flash Lite, Fallbacks: 3.5 Flash, 3.6 Flash, 3.5 Flash Lite)
+    if (geminiApiKey) {
+      const GEMINI_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'];
 
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 14000); // 14s timeout per attempt
+      for (const model of GEMINI_MODELS) {
+        const maxRetries = (model === 'gemini-3.1-flash-lite') ? 2 : 1;
 
-          const geminiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              signal: controller.signal,
-              body: JSON.stringify({
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [{ text: `${system}\n\n${prompt}` }]
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 9000); // 9s fast timeout
+
+            const geminiRes = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                body: JSON.stringify({
+                  contents: [
+                    {
+                      role: 'user',
+                      parts: [{ text: `${system}\n\n${prompt}` }]
+                    }
+                  ],
+                  generationConfig: {
+                    response_mime_type: 'application/json',
+                    temperature: 0.65
                   }
-                ],
-                generationConfig: {
-                  response_mime_type: 'application/json',
-                  temperature: 0.65
-                }
-              })
+                })
+              }
+            );
+            clearTimeout(timeoutId);
+
+            if (!geminiRes.ok) {
+              const errData = await geminiRes.json().catch(() => ({}));
+              const errorMsg = errData.error?.message || `Gemini API returned status ${geminiRes.status}`;
+              lastErrorMsg = errorMsg;
+
+              const isTransient =
+                geminiRes.status === 503 ||
+                geminiRes.status === 429 ||
+                /demand|unavailable|overloaded|busy|temporary|quota|resource_exhausted/i.test(errorMsg);
+
+              if (isTransient && attempt < maxRetries) {
+                console.warn(`[Gemini ${model}] Transient capacity spike (attempt ${attempt}): ${errorMsg}. Retrying in 1000ms...`);
+                await sleep(1000 * attempt);
+                continue;
+              }
+
+              console.warn(`[Gemini ${model}] Failed (${errorMsg}). Moving to next fallback.`);
+              break;
             }
-          );
-          clearTimeout(timeoutId);
 
-          if (!geminiRes.ok) {
-            const errData = await geminiRes.json().catch(() => ({}));
-            const errorMsg = errData.error?.message || `Gemini API returned status ${geminiRes.status}`;
-            lastErrorMsg = errorMsg;
+            const data = await geminiRes.json();
+            const candidate = data.candidates?.[0];
+            const raw = candidate?.content?.parts?.map(b => b.text || '').join('').trim() || '';
+            const clean = raw.replace(/^```json\s*|^```\s*|```$/g, '').trim();
 
-            const isTransient =
-              geminiRes.status === 503 ||
-              geminiRes.status === 429 ||
-              /demand|unavailable|overloaded|busy|temporary|quota|resource_exhausted/i.test(errorMsg);
-
-            if (isTransient && attempt < maxRetries) {
-              console.warn(`[Gemini API ${model}] Transient capacity spike (attempt ${attempt}): ${errorMsg}. Retrying in 1200ms...`);
-              await sleep(1200 * attempt);
+            try {
+              parsed = JSON.parse(clean);
+              console.log(`[Generation Success] Delivered via Gemini (${model})`);
+              break;
+            } catch (parseErr) {
+              lastErrorMsg = `Failed to parse JSON response from ${model}`;
+              break;
+            }
+          } catch (fetchErr) {
+            lastErrorMsg = fetchErr.name === 'AbortError'
+              ? `Request timed out on ${model}`
+              : fetchErr.message;
+            console.warn(`[Gemini ${model}] Attempt ${attempt} error: ${lastErrorMsg}`);
+            if (attempt < maxRetries) {
+              await sleep(1000 * attempt);
               continue;
             }
+            break;
+          }
+        }
 
-            console.warn(`[Gemini API ${model}] Attempt ${attempt} failed: ${errorMsg}. Moving to next candidate.`);
-            break; // Try next model in fallback list
+        if (parsed) break;
+      }
+    }
+
+    // 2. FALLBACK TIER: Groq Cloud (Models: openai/gpt-oss-120b, openai/gpt-oss-20b, qwen/qwen3.8-27b)
+    // Used when Gemini API key is missing OR when all Gemini models fail / are overloaded
+    if (!parsed && groqApiKey) {
+      console.log('[Generation Fallback] Activating Groq fallback provider...');
+      const GROQ_MODELS = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
+
+      for (const model of GROQ_MODELS) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s fast timeout
+
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${groqApiKey}`
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              model,
+              response_format: { type: 'json_object' },
+              messages: [
+                { role: 'system', content: system },
+                { role: 'user', content: prompt }
+              ],
+              temperature: 0.65
+            })
+          });
+          clearTimeout(timeoutId);
+
+          if (!groqRes.ok) {
+            const errData = await groqRes.json().catch(() => ({}));
+            const errorMsg = errData.error?.message || `Groq API returned status ${groqRes.status}`;
+            lastErrorMsg = errorMsg;
+            console.warn(`[Groq ${model}] Failed: ${errorMsg}`);
+            continue;
           }
 
-          const data = await geminiRes.json();
-          const candidate = data.candidates?.[0];
-          const raw = candidate?.content?.parts?.map(b => b.text || '').join('').trim() || '';
-          const clean = raw.replace(/^```json\s*|^```\s*|```$/g, '').trim();
+          const data = await groqRes.json();
+          const content = data.choices?.[0]?.message?.content || '';
+          const clean = content.replace(/^```json\s*|^```\s*|```$/g, '').trim();
 
           try {
             parsed = JSON.parse(clean);
-            break; // Success! Exit retry loop
-          } catch (parseErr) {
-            lastErrorMsg = `Failed to parse JSON response from ${model}`;
+            console.log(`[Generation Success] Delivered via Groq (${model})`);
             break;
+          } catch (parseErr) {
+            lastErrorMsg = `Failed to parse JSON response from Groq (${model})`;
           }
-        } catch (fetchErr) {
-          lastErrorMsg = fetchErr.name === 'AbortError'
-            ? `Request timed out on ${model}`
-            : fetchErr.message;
-          console.warn(`[Gemini API ${model}] Error on attempt ${attempt}: ${lastErrorMsg}`);
-          if (attempt < maxRetries) {
-            await sleep(1000 * attempt);
-            continue;
-          }
-          break;
+        } catch (groqErr) {
+          lastErrorMsg = groqErr.name === 'AbortError'
+            ? `Request timed out on Groq ${model}`
+            : groqErr.message;
+          console.warn(`[Groq ${model}] Error: ${lastErrorMsg}`);
         }
-      }
-
-      if (parsed) {
-        break; // Successfully generated, exit model loop
       }
     }
 
     if (!parsed) {
       return res.status(503).json({
-        error: lastErrorMsg || 'Google AI models are currently experiencing high demand. Please try again in a few moments.'
+        error: lastErrorMsg || 'All generation models (Gemini & Groq) are currently unavailable. Please try again in a few moments.'
       });
     }
 
